@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 25.     박민주     최초작성               -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+<mapper namespace="kr.or.ddit.groupware.reservation.vehicle.dao.VehicleDAO">
+
+	<select id="selectCommonVReserveTimeCdList" resultType="CommonVO">
+		SELECT
+		    COMMON_CODE_CD
+		    , COMMON_CODE_UPPER_CD
+		    , COMMON_CODE_SJ
+		    , COMMON_CODE_ENGL_SJ
+		    , COMMON_CODE_USE_AT
+		FROM COMMON_CODE
+		    WHERE COMMON_CODE_UPPER_CD='VHCLE_RESERVE_CD'
+	</select>
+
+	<resultMap type="VehicleReservationVO" id="vehicleReservationMap" autoMapping="true">
+		<id property="vhcleReserveCd" column="VHCLE_RESERVE_CD"/>
+		<association property="vhcle" javaType="VehicleVO" autoMapping="true">
+		</association>
+	</resultMap>
+	
+	<resultMap type="VehicleReservationVO" id="vehicleReservationMap2" autoMapping="true">
+	    <id property="vhcleReserveCd" column="VHCLE_RESERVE_CD"/>
+	    <association property="vhcle" javaType="VehicleVO" autoMapping="true"/>
+	</resultMap>
+
+	<select id="selectVehicleReservationList" resultMap="vehicleReservationMap">
+		
+	</select>
+	
+	<!-- 내 예약 내역 조회에 필요한 totalCount -->
+	<select id="selectTotalRecord" parameterType="PaginationInfo" resultType="int">
+		SELECT COUNT(*) 
+		FROM VEHICLE_RESERVATION 
+		WHERE 
+			VHCLE_RESERVE_EMP_CD=#{variousCondition.empCd}
+	</select>
+	
+	<!-- 사원한명의 차량예약 내역 조회 -->
+	<select id="selectMyVehicleReservationList" resultMap="vehicleReservationMap2" parameterType="PaginationInfo">
+		SELECT *
+				FROM (
+				    SELECT
+				        r.vhcle_reserve_cd,
+				        r.vhcle_reserve_emp_cd,
+				        r.vhcle_reserve_pw,
+				        r.vhcle_reserve_pur,
+				        r.vhcle_use_time_cd,
+				        r.vhcle_use_date,
+				        r.VHCLE_CD,
+				        ve.VHCLE_NO,
+				        ve.VHCLE_CAPACITY,
+				        ve.VHCLE_IMG,
+				        ve.VHCLE_MODEL ,
+				        ve.VHCLE_REGIST_DATE,
+				        ve.VHCLE_FLAG,
+				         CC.COMMON_CODE_SJ vhcleUseTime,
+				        ROWNUM AS rnum
+				    FROM
+				        vehicle_reservation r
+				    LEFT OUTER JOIN VEHICLE ve
+				        ON ve.VHCLE_CD = r.VHCLE_CD
+				          LEFT OUTER JOIN COMMON_CODE CC ON CC.COMMON_CODE_CD = r.vhcle_use_time_cd
+				    WHERE r.vhcle_reserve_emp_cd = #{variousCondition.empCd}
+				    ORDER BY TO_DATE(r.vhcle_use_date, 'YYYY-MM-DD') DESC
+				)
+		  <![CDATA[ WHERE rnum BETWEEN #{startRow} AND #{endRow}]]>
+	</select>
+
+	<select id="selectSimpleReservationList" parameterType="String" resultType="VehicleReservationVO">
+		SELECT
+		    vhcle_reserve_cd,
+		    vhcle_reserve_emp_cd,
+		    vhcle_reserve_pw,
+		    vhcle_reserve_pur,
+		    vhcle_use_time_cd,
+		    vhcle_use_date,
+		    vhcle_cd
+		FROM 
+			vehicle_reservation
+		where
+		    vhcle_cd = #{vhcleCd}
+	</select>
+
+    <!-- 특정 차량의 특정 기간에 대한 list -->
+	<select id="selectOneVehicleReservationList" resultType="VehicleReservationVO" parameterType="map">
+		SELECT
+		    vhcle_reserve_cd,
+		    vhcle_reserve_emp_cd,
+		    vhcle_reserve_pw,
+		    vhcle_reserve_pur,
+		    vhcle_use_time_cd,
+		    vhcle_use_date,
+		    vhcle_cd
+             , FN_GET_EMP_NAME(VHCLE_RESERVE_EMP_CD) VHCLE_RESERVE_EMP_NM 			/* 예약자명 */
+		    , FN_GET_EMP_RANK_NM(VHCLE_RESERVE_EMP_CD) VHCLE_RESERVE_EMP_RANK_NM	/* 예약자 직급명*/
+		    , FN_GET_DEPT_NAME(VHCLE_RESERVE_EMP_CD) VHCLE_RESERVE_EMP_DEPT_NM 	/* 예약자 부서명*/
+            , EMP_PROFILE_IMG as VHCLE_RESERVE_EMP_PROFILE_IMG
+		FROM
+		    vehicle_reservation
+            INNER JOIN EMPLOYEE ON EMPLOYEE.EMP_CD = vehicle_reservation.vhcle_reserve_emp_cd
+		WHERE
+		    TO_DATE(vhcle_use_date, 'YYYY-MM-DD') BETWEEN TO_DATE(#{startDate}, 'YYYY-MM-DD') AND TO_DATE(#{endDate}, 'YYYY-MM-DD')
+		    AND vhcle_cd = #{vhcleCd}
+	</select>
+	
+	<!-- 차량예약 (차량) ex)R231125V0001 -->
+	<insert id="insertVehicleReservation" parameterType="VehicleReservationVO">
+		<selectKey keyProperty="vhcleReserveCd" order="BEFORE" resultType="String">
+			SELECT 
+			    TO_CHAR(SYSDATE,'YYMMDD')||'V'||LPAD(RESERVATION_SEQ.NEXTVAL,4,0) AS VHCLE_RESERVE_CD
+			FROM DUAL
+		</selectKey>
+		INSERT INTO VEHICLE_RESERVATION (
+		    VHCLE_RESERVE_CD,
+		    VHCLE_RESERVE_EMP_CD,
+		    VHCLE_RESERVE_PW,
+		    VHCLE_RESERVE_PUR,
+		    VHCLE_USE_DATE,
+		    VHCLE_USE_TIME_CD,		
+		    VHCLE_CD
+		) VALUES (
+		   #{vhcleReserveCd,jdbcType=VARCHAR}
+			, #{vhcleReserveEmpCd,jdbcType=VARCHAR}
+			, #{vhcleReservePw,jdbcType=VARCHAR}
+			, #{vhcleReservePur,jdbcType=VARCHAR}
+			, #{vhcleUseDate,jdbcType=VARCHAR}
+			, #{vhcleUseTimeCd,jdbcType=VARCHAR}
+			, #{vhcleCd,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<!-- 예약 내역 삭제 -->
+	<delete id="deleteVehicleReservation" parameterType="String">
+		DELETE 
+			FROM VEHICLE_RESERVATION
+		WHERE
+   			VHCLE_RESERVE_CD = #{vhcleReserveCd}
+	</delete>
+	
+	<!-- 특정차량의 오늘 차량 예약 목록 조회 -->
+	<select id="selectTodayVehicleReservationList" resultType="VehicleReservationVO" parameterType="String">
+		SELECT
+		   v.vhcle_reserve_cd,
+		    v.vhcle_reserve_emp_cd,
+		    v.vhcle_reserve_pw,
+		    v.vhcle_reserve_pur,
+		    v.vhcle_use_time_cd,
+		    v.vhcle_use_date,
+		    v.vhcle_cd,
+            c.COMMON_CODE_SJ vhcleUseTime
+		FROM
+		    vehicle_reservation v
+                inner join common_code c on v.vhcle_use_time_cd=c.COMMON_CODE_CD
+		WHERE  
+			vhcle_use_date = TO_CHAR(SYSDATE, 'YYYY-MM-DD') 
+			AND vhcle_cd = #{vhcleCd}
+	</select>
+	
+	<select id="selectReservationPasswordVehicle" parameterType="String" resultType="String">
+		SELECT 
+			VHCLE_RESERVE_PW
+		FROM 
+			VEHICLE_RESERVATION
+		WHERE
+			VHCLE_RESERVE_CD = #{vhcleReserveCd}
+	</select>	
+
+</mapper>

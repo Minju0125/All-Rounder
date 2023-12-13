@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        	수정자     수정내용               -->
+<!--  ==========   		======    ==============        -->
+<!--  2023. 11. 16.}    김보영     최초작성               -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+<mapper namespace="kr.or.ddit.pms.job.dao.JobFileDAO">
+
+	
+	<!-- 파일 삭제 -->
+	<delete id="deleteFile" parameterType="PAtchVO">
+		DELETE 
+		FROM PATCH
+		WHERE PRO_FILE_CODE=#{proFileCode}
+		AND PRO_ATCH_SNM=#{proAtchSnm}
+	</delete>
+	
+	
+	<!-- 파일리스트 조회 -->
+	<select id="selectFileList" parameterType="PAtchVO" resultType="PAtchVO">
+		
+		SELECT 
+			PRO_FILE_CODE
+			, PRO_ATCHNM
+			, PRO_ATCH_SNM
+			, PRO_ATCHTYPE
+			, PRO_ATCH_SIZE
+			, PRO_ATCH_FANCYSIZE
+		FROM PATCH
+		WHERE PRO_FILE_CODE =#{proFileCode}
+	</select>
+
+	<!-- 하나의 파일조회 -->
+	<select id="selectFile" parameterType="PAtchVO" resultType="PAtchVO">
+		
+		SELECT 
+			PRO_FILE_CODE
+			, PRO_ATCHNM
+			, PRO_ATCH_SNM
+			, PRO_ATCHTYPE
+			, PRO_ATCH_SIZE
+			, PRO_ATCH_FANCYSIZE
+		FROM PATCH
+		WHERE PRO_FILE_CODE =#{proFileCode}
+		AND PRO_ATCH_SNM =#{proAtchSnm}
+	</select>
+
+
+	<!--일감파일 등록 -->
+	<insert id="insertJobFile" parameterType="PAtchVO">
+		INSERT INTO PATCH
+		(
+			PRO_FILE_CODE
+			, PRO_ATCHNM
+			, PRO_ATCH_SNM
+			, PRO_ATCHTYPE
+			, PRO_JOBSN
+			, PRO_ATCH_SIZE
+			, PRO_ATCH_FANCYSIZE
+		)
+		VALUES(
+			#{proFileCode}
+			, #{proAtchnm}
+			, #{proAtchSnm}
+			, #{proAtchtype}
+			, #{proJobsn}
+			, #{proAtchSize}
+			, #{proAtchFancysize}
+		)
+		
+	</insert>
+
+</mapper>

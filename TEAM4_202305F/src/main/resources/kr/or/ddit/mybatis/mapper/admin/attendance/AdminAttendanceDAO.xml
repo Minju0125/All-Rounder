@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.admin.attendance.dao.AdminAttendanceDAO">
+
+	<resultMap type="AttendanceVO" id="attendanceMap" autoMapping="true">
+		<id property="attDate" column="ATT_DATE"/>
+		<id property="empCd" column="EMP_CD"/>
+		<collection property="alList" ofType="AttendanceLogVO" autoMapping="true"/>
+	</resultMap>
+	 
+	<select id="attendanceList" resultType="AttendanceVO" parameterType="String">
+		SELECT ATT_DATE, EMP_CD, START_TIME, END_TIME, FN_GET_EMP_NAME(EMP_CD) EMP_NAME, FN_GET_DEPT_NAME(EMP_CD) DEPT_NAME
+		FROM ATTENDANCE
+		WHERE ATT_DATE LIKE #{date}
+        ORDER BY EMP_CD,ATT_DATE
+	</select>
+	
+	<select id="selectEmp" parameterType="String" resultType="EmployeeVO">
+		SELECT EMP_CD, EMP_NAME, FN_GET_DEPT_NAME(EMP_CD) DEPT_CD
+		FROM EMPLOYEE
+		WHERE EMP_CD=#{empCd}
+	</select>
+	
+	<select id="adminAttendanceMonth" parameterType="Map" resultMap="attendanceMap">
+		SELECT A.ATT_DATE ATT_DATE,A.EMP_CD EMP_CD,START_TIME,END_TIME,ATT_LOG,ATT_LOG_TIME
+		FROM ATTENDANCE A LEFT OUTER JOIN ATTENDANCE_LOG AL
+			ON A.ATT_DATE=AL.ATT_DATE AND A.EMP_CD=AL.EMP_CD
+		WHERE A.ATT_DATE LIKE #{attendanceDate} AND A.EMP_CD=#{empCd}
+		ORDER BY A.ATT_DATE
+	</select>
+	
+	<select id="vacationList" parameterType="Map" resultType="VacationVO">
+		SELECT V_SDAY, EMP_CD, V_FLAG, V_WHY, V_EDAY
+		FROM VACATION
+		WHERE
+		<![CDATA[
+			(V_SDAY LIKE #{attendanceDate} OR V_EDAY LIKE #{attendanceDate})
+        ]]>
+        <if test="empCd neq null and @org.apache.commons.lang3.StringUtils@isNotBlank(empCd)">
+        AND EMP_CD=#{empCd}
+        </if>
+	</select>
+	
+	<select id="selectDeptList" resultType="DeptVO">
+		SELECT DEPT_CD,DEPT_NAME
+		FROM DEPT
+	</select>
+	
+	<select id="selectRank" resultType="Map">
+		SELECT COMMON_CODE_CD,COMMON_CODE_SJ
+		FROM COMMON_CODE
+		WHERE COMMON_CODE_UPPER_CD='RANK' AND COMMON_CODE_CD != 'RANK_00'
+		ORDER BY COMMON_CODE_CD
+	</select>
+	
+	<select id="selectDeptEmp" parameterType="Map" resultType="EmployeeVO">
+		SELECT EMP_CD,EMP_NAME, FN_GET_DEPT_NAME(EMP_CD) DEPT_CD
+		FROM EMPLOYEE
+		WHERE DEPT_CD=#{deptCd}
+		<if test="searchRank neq null and @org.apache.commons.lang3.StringUtils@isNotBlank(searchRank)">
+			AND EMP_RANK=#{searchRank}
+		</if>
+	</select>
+	
+	<update id="timeUpdate" parameterType="Map">
+		UPDATE ATTENDANCE
+		SET	
+		<if test='type eq "s"'>
+			START_TIME=#{time}
+		</if>
+		<if test='type eq "e"'>
+			END_TIME=#{time}
+		</if>
+		WHERE ATT_DATE = #{attDate} AND EMP_CD=#{empCd}
+	</update>
+</mapper>

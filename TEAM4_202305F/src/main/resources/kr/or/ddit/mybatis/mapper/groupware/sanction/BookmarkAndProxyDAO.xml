@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일         수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 17.  전수진     최초작성               -->
+<!--  2023. 11. 18.  전수진     즐겨찾기 리스트, 상세보기 구현    -->
+<!--  2023. 11. 28.  전수진     대결권설정   -->
+<!--  2023. 12. 04.  전수진     즐겨찾기삭제   -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+<mapper namespace="kr.or.ddit.groupware.sanction.dao.BookmarkAndProxyDAO">
+
+	<!-- 즐겨찾기 추가 	-->
+	<insert id="insertBookmark" parameterType="BookmarkVO">
+	<selectKey order="BEFORE" keyProperty="bkmkNo" resultType="String">
+		SELECT 'BK' || #{bkmkOwner} ||
+			TO_CHAR( COALESCE( TO_NUMBER(MAX(SUBSTR(BKMK_NO, LENGTH('BK' || #{bkmkOwner}) + 1))) + 1, 1), 'FM000') AS GENERATED_KEY
+		FROM BOOKMARK
+		WHERE SUBSTR(BKMK_NO, 1, LENGTH('BK' || #{bkmkOwner})) = 'BK' || #{bkmkOwner}
+	</selectKey>
+		INSERT INTO BOOKMARK (
+		    BKMK_NO			/* 즐겨찾기번호 */
+		    , BKMK_OWNER	/* 즐겨찾기소유자 */
+		    , BKMK_NM		/* 즐겨찾기이름 */
+		) VALUES (
+			#{bkmkNo}
+		    , #{bkmkOwner}
+		    , #{bkmkNm}
+		)
+	</insert>
+
+	<!-- 즐겨찾기상세 추가 -->
+	<insert id="insertBookmarkDetail" parameterType="BookmarkDetailVO">
+		INSERT INTO BOOKMARK_DETAIL (
+		    BKMK_DETAIL_NO	/* 즐겨찾기상세번호 */
+		    , BKMK_NO		/* 즐겨찾기번호 */
+		    , SANCTN_ORDR	/* 결재순서 */
+		    , SANCTNER		/* 결재자 */
+		) VALUES (
+		    BKMKDETAIL_SEQ.NEXTVAL
+		    , #{bkmkNo}
+		    , #{sanctnOrdr}
+		    , #{sanctner}
+		)
+	</insert>
+	
+	<!-- 즐겨찾기 리스트 -->
+	<select id="selectBookmarkList" parameterType="String" resultType="BookmarkVO">
+		SELECT
+		    BKMK_NO 		/* 즐겨찾기 번호 */
+		    , BKMK_OWNER	/* 즐겨찾기 소유자 */
+		    , BKMK_NM		/* 즐겨찾기 이름 */
+		FROM
+		    BOOKMARK
+		WHERE  BKMK_OWNER = #{sanctnOrdr}
+		ORDER BY BKMK_NO ASC
+	</select>
+	
+	<!-- 즐겨찾기 상세조회 -->
+	<resultMap type="BookmarkDetailVO" id="detailMap">
+		<id property="bkmkDetailNo" column="BKMK_DETAIL_NO"/>
+		<result property="bkmkNo" column="BKMK_NO"/>
+		<result property="sanctnOrdr" column="SANCTN_ORDR"/>
+		<result property="sanctner" column="SANCTNER"/>
+		<association property="bookmark" javaType="BookmarkVO" autoMapping="true">
+			<id property="bkmkNo" column="BKMK_NO"/>
+			<association property="emp" javaType="EmployeeVO" autoMapping="true">
+				<id property="empCd" column="EMP_CD" />
+				<association property="common" javaType="CommonVO" autoMapping="true" />
+			</association>
+		</association>
+	</resultMap>
+	<select id="selectBookmarkDetailList" parameterType="String" resultMap="detailMap">
+		SELECT
+		    D.BKMK_DETAIL_NO	/* 즐겨찾기상세번호 */
+		    , D.BKMK_NO			/* 즐겨찾기번호 */	
+		    , D.SANCTN_ORDR		/* 결재순서 */
+		    , D.SANCTNER		/* 결재자 */
+		    , E.EMP_CD			/* 사번 */
+		    , E.EMP_NAME		/* 사원명 */
+            , C.COMMON_CODE_SJ 	/* 공동코드명(직급명) */
+		FROM
+		    BOOKMARK_DETAIL D INNER JOIN BOOKMARK B ON (D.BKMK_NO = B.BKMK_NO)
+			    INNER JOIN EMPLOYEE E ON(D.SANCTNER = E.EMP_CD)
+	            INNER JOIN COMMON_CODE C ON (E.EMP_RANK = C.COMMON_CODE_CD)
+		WHERE
+		    D.BKMK_NO=#{bkmkNo}
+        ORDER BY D.SANCTN_ORDR ASC
+	</select>
+	
+	<!-- 즐겨찾기 삭제 -->
+	<delete id="deleteBookmark" parameterType="String">
+		DELETE FROM BOOKMARK
+		WHERE
+			BKMK_NO = #{bkmkNo}
+	</delete>
+	
+	<!-- 즐겨찾기 상세 삭제 -->
+	<delete id="deleteBookmarkDetail" parameterType="int">
+		DELETE FROM BOOKMARK_DETAIL
+		WHERE
+			BKMK_DETAIL_NO = #{bkmkDetailNo}
+	</delete>
+	
+	<!--********************************대결권설정관련*****************************************-->
+	<!-- 대결권 설정 -->
+	<insert id="insertSanctionProxy" parameterType="SanctionByProxyVO">
+	<selectKey order="BEFORE" resultType="String" keyProperty="prxsanctnNo">
+		SELECT     
+			'PRX' || LPAD(COALESCE(MAX(TO_NUMBER(SUBSTR(PRXSANCTN_NO, 4))), 0) + 1, 5, '00000') 
+		FROM SANCTION_BY_PROXY
+	</selectKey>
+		INSERT INTO SANCTION_BY_PROXY (
+		    PRXSANCTN_NO		/* 대결권번호 */
+		    , PRXSANCTN_ALWNC 	/* 대결권부여자 */
+		    , PRXSANCTN_CNFER	/* 대결권수여자 */
+		    , ALWNC_DATE		/* 대결권부여일자 */
+		    , EXTSH_DATE		/* 대결권소멸일자 */
+		    , ALWNC_REASON 		/* 대결권지정사유 */
+		    , PRXSANCTN_YN 		/* 대결권사용여부 */
+		) VALUES (
+		    #{prxsanctnNo}
+		    , #{prxsanctnAlwnc}
+		    , #{prxsanctnCnfer}
+		    , #{alwncDate}
+		    , #{extshDate}
+		    , #{alwncReason}
+		    , #{prxsanctnYn}
+		)
+	</insert>
+	
+	<!-- 대결권부여자의 대결권설정 확인 
+	 SanctionByProxyVO(prxsanctnNo=null, prxsanctnAlwnc=E220321002, prxsanctnAlwncNm=null, prxsanctnAlwncRankNm=null, prxsanctnAlwncDeptName=null
+	 , prxsanctnCnfer=E231120030, prxsanctnCnferNm=null, prxsanctnCnferRankNm=null, prxsanctnCnferDeptName=null, alwncDate=2023-11-29, extshDate=2023-12-01
+	 , alwncReason=test, prxsanctnYn=null, emp=null)
+	 
+	 시작이 받은종료보다 작고 종료는 받은시작보다 큰 경우 
+	-->
+	<select id="selectPrxsanctnAlwncSetting" parameterType="SanctionByProxyVO" resultType="SanctionByProxyVO">
+	SELECT
+			PRXSANCTN_NO			/* 대결권번호 */
+			, PRXSANCTN_ALWNC		/* 대결권부여자 */
+			, FN_GET_EMP_NAME(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_NM 			/* 대결권부여자명 */
+	        , FN_GET_EMP_RANK_NM(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_RANK_NM 	/* 대결권부여자 직급명 */
+            , FN_GET_DEPT_NAME(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_DEPT_NAME 	/* 대결권부여자 부서명 */
+			, PRXSANCTN_CNFER		/* 대결권수여자 */
+			, FN_GET_EMP_NAME(PRXSANCTN_CNFER) PRXSANCTN_CNFER_NM 			/*대결권수여자 명 */
+	        , FN_GET_EMP_RANK_NM(PRXSANCTN_CNFER) PRXSANCTN_CNFER_RANK_NM 	/*대결권수여자 직급명 */
+            , FN_GET_DEPT_NAME(PRXSANCTN_CNFER) PRXSANCTN_CNFER_DEPT_NAME 	/*대결권수여자 부서명 */			
+	        , TO_CHAR(TO_DATE(ALWNC_DATE, 'RR/MM/DD'), 'YYYY-MM-DD') ALWNC_DATE	/* 대결권부여일자 */
+	        , TO_CHAR(TO_DATE(EXTSH_DATE, 'RR/MM/DD'), 'YYYY-MM-DD') EXTSH_DATE	/* 대결권소멸일자 */
+			, ALWNC_REASON 			/* 대결권지정사유 */
+			, PRXSANCTN_YN 			/* 대결권사용여부 */
+		FROM
+		    SANCTION_BY_PROXY
+		WHERE PRXSANCTN_ALWNC = #{prxsanctnAlwnc}
+			<![CDATA[
+        	AND ALWNC_DATE < #{extshDate} AND EXTSH_DATE > #{alwncDate}
+        	]]>
+			AND PRXSANCTN_CNFER = #{prxsanctnCnfer} AND PRXSANCTN_YN='Y'
+	</select>
+	
+	<!-- 대결권해제 -->
+	<update id="updateSanctionProxy" parameterType="SanctionByProxyVO">
+		UPDATE SANCTION_BY_PROXY
+		SET
+			PRXSANCTN_YN = #{prxsanctnYn}
+		WHERE
+			PRXSANCTN_NO = #{prxsanctnNo}
+	</update>
+
+	<!-- 대결권설정 가능여부 확인용 -->
+	<select id="selectProxyCheck" parameterType="String" resultType="SanctionByProxyVO">
+		SELECT
+		    PRXSANCTN_NO 		/* 대결권번호 */
+			, PRXSANCTN_ALWNC		/* 대결권부여자 */
+			, FN_GET_EMP_NAME(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_NM 			/* 대결권부여자명 */
+	        , FN_GET_EMP_RANK_NM(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_RANK_NM 	/* 대결권부여자 직급명 */
+            , FN_GET_DEPT_NAME(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_DEPT_NAME 	/* 대결권부여자 부서명 */
+			, PRXSANCTN_CNFER		/* 대결권수여자 */
+			, FN_GET_EMP_NAME(PRXSANCTN_CNFER) PRXSANCTN_CNFER_NM 			/*대결권수여자 명 */
+	        , FN_GET_EMP_RANK_NM(PRXSANCTN_CNFER) PRXSANCTN_CNFER_RANK_NM 	/*대결권수여자 직급명 */
+            , FN_GET_DEPT_NAME(PRXSANCTN_CNFER) PRXSANCTN_CNFER_DEPT_NAME 	/*대결권수여자 부서명 */	
+		    , ALWNC_DATE 		/* 대결권수여일자 */
+		    , EXTSH_DATE 		/* 대결권소멸일자 */
+		    , ALWNC_REASON 		/* 대결권지정사유 */
+		    , PRXSANCTN_YN 		/* 대결권사용여부 */
+		FROM
+		    SANCTION_BY_PROXY
+		WHERE 
+		    PRXSANCTN_ALWNC = #{prxsanctnAlwnc} AND PRXSANCTN_YN='Y' 
+	</select>
+	
+	<!-- 대결권수여자인지 확인 -->
+	<select id="selectProxyRecivedCheck" parameterType="String" resultType="SanctionByProxyVO">
+		SELECT
+		    PRXSANCTN_NO 		/* 대결권번호 */
+			, PRXSANCTN_ALWNC		/* 대결권부여자 */
+			, FN_GET_EMP_NAME(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_NM 			/* 대결권부여자명 */
+	        , FN_GET_EMP_RANK_NM(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_RANK_NM 	/* 대결권부여자 직급명 */
+            , FN_GET_DEPT_NAME(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_DEPT_NAME 	/* 대결권부여자 부서명 */
+			, PRXSANCTN_CNFER		/* 대결권수여자 */
+			, FN_GET_EMP_NAME(PRXSANCTN_CNFER) PRXSANCTN_CNFER_NM 			/*대결권수여자 명 */
+	        , FN_GET_EMP_RANK_NM(PRXSANCTN_CNFER) PRXSANCTN_CNFER_RANK_NM 	/*대결권수여자 직급명 */
+            , FN_GET_DEPT_NAME(PRXSANCTN_CNFER) PRXSANCTN_CNFER_DEPT_NAME 	/*대결권수여자 부서명 */	
+		    , ALWNC_DATE 		/* 대결권수여일자 */
+		    , EXTSH_DATE 		/* 대결권소멸일자 */
+		    , ALWNC_REASON 		/* 대결권지정사유 */
+		    , PRXSANCTN_YN 		/* 대결권사용여부 */
+		FROM
+		    SANCTION_BY_PROXY
+		WHERE 
+		    PRXSANCTN_CNFER = #{prxsanctnCnfer} AND PRXSANCTN_YN='Y' 
+	</select>
+	
+	<select id="selectProxyOne" parameterType="String" resultType="SanctionByProxyVO">
+		SELECT
+		    PRXSANCTN_NO 		/* 대결권번호 */
+			, PRXSANCTN_ALWNC		/* 대결권부여자 */
+			, FN_GET_EMP_NAME(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_NM 			/* 대결권부여자명 */
+	        , FN_GET_EMP_RANK_NM(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_RANK_NM 	/* 대결권부여자 직급명 */
+            , FN_GET_DEPT_NAME(PRXSANCTN_ALWNC) PRXSANCTN_ALWNC_DEPT_NAME 	/* 대결권부여자 부서명 */
+			, PRXSANCTN_CNFER		/* 대결권수여자 */
+			, FN_GET_EMP_NAME(PRXSANCTN_CNFER) PRXSANCTN_CNFER_NM 			/*대결권수여자 명 */
+	        , FN_GET_EMP_RANK_NM(PRXSANCTN_CNFER) PRXSANCTN_CNFER_RANK_NM 	/*대결권수여자 직급명 */
+            , FN_GET_DEPT_NAME(PRXSANCTN_CNFER) PRXSANCTN_CNFER_DEPT_NAME 	/*대결권수여자 부서명 */	
+		    , ALWNC_DATE 		/* 대결권수여일자 */
+		    , EXTSH_DATE 		/* 대결권소멸일자 */
+		    , ALWNC_REASON 		/* 대결권지정사유 */
+		    , PRXSANCTN_YN 		/* 대결권사용여부 */
+		FROM
+		    SANCTION_BY_PROXY
+		WHERE PRXSANCTN_NO = #{prxsanctnNo}
+	
+	</select>
+
+	<!--********************************스케쥴링 대결권설정**************************************-->
+	
+	<select id="selectSanctionProxyList" resultType="SanctionByProxyVO">
+		SELECT
+		    PRXSANCTN_NO 		/* 대결권번호 */
+		    , PRXSANCTN_ALWNC 	/* 대결권부여자 */
+		    , PRXSANCTN_CNFER 	/* 대결권수여자 */
+		    , ALWNC_DATE 		/* 대결권수여일자 */
+		    , EXTSH_DATE 		/* 대결권소멸일자 */
+		    , ALWNC_REASON 		/* 대결권지정사유 */
+		    , PRXSANCTN_YN 		/* 대결권사용여부 */
+		FROM
+		    SANCTION_BY_PROXY
+		WHERE
+		    PRXSANCTN_YN='Y'
+	</select>
+	
+	
+</mapper>

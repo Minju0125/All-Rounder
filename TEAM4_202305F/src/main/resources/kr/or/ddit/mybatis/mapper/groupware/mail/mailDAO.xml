@@ -1,0 +1,529 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!-- [[개정이력(Modification Information)]] -->
+<!-- 수정일 수정자 수정내용 -->
+<!-- ========== ====== ============== -->
+<!-- 2023. 11. 13. 박민주 최초작성 -->
+<!-- 2023. 11. 14. 박민주 insert 쿼리 추가 -->
+<!-- 2023. 11. 15. 박민주 list 조회 쿼리 추가 -->
+<!-- 2023. 12.. 04. 박민주 페이징 처리를 위해 목록 조회 쿼리 수정-->
+<!-- Copyright (c) 2023 by DDIT All right reserved -->
+
+<mapper namespace="kr.or.ddit.groupware.mailing.dao.MailDAO">
+
+	<resultMap type="MailVO" id="mailMap" autoMapping="true">
+		<id property="mailCd" column="MAIL_CD"></id>
+		<association property="senderVO" javaType="EmployeeVO"
+			autoMapping="true">
+			<id property="empCd" column="EMP_CD" />
+			<association property="common" autoMapping="true" />
+			<association property="dept" autoMapping="true" />
+		</association>
+		<collection property="mailReceiverList"
+			ofType="MailReceptionVO" autoMapping="true">
+			<id property="mrReceiver" column="MR_RECEIVER"></id>
+		</collection>
+		<collection property="attachments" ofType="MailAttachVO" autoMapping="true"/>
+	</resultMap>
+
+	<!-- resultMap -->
+	<resultMap type="MailVO" id="simpleMailVOAMp">
+		<id property="mailCd" column="MAIL_CD"></id>
+		<result property="mailSj" column="MAIL_SJ"/>
+		<result property="mailCn" column="MAIL_CN"/>
+		<result property="mailTrnsmisDt" column="MAIL_TRNSMIS_DT"/>
+		<result property="mailSender" column="MAIL_SENDER"/>
+		<result property="sDeptName" column="sDeptName"/>
+		<result property="sEmpName" column="sEmpName"/>
+		<result property="sEmpRank" column="sEmpRank"/>
+		<result property="sEmpProfileImg" column="sEmpProfileImg"/>
+		<result property="mailReceiver" column="MR_RECEIVER"/>
+		<result property="rDeptName" column="rDeptName"/>
+		<result property="rEmpName" column="rEmpName"/>
+		<result property="rEmpRank" column="rEmpRank"/>
+		<result property="rEmpProfileImg" column="rEmpProfileImg"/>
+	</resultMap>
+	
+	<!-- =================================== 수신 메일 목록 조회 ================================ -->
+	<!-- 받은 메일함 페이징을 위한 총 레코드수 조회 -->
+	<!-- 메일의 수신자가 본인이면서 삭제여부가 0 (일반) 인 경우 -->
+	<select id="selectReceivedTotalRecord" resultType="int" parameterType="PaginationInfo">
+		SELECT
+			COUNT(*)
+		FROM
+			MAIL_RECEPTION
+		WHERE
+			MR_RECEIVER=#{variousCondition.empCd} AND MAIL_DELETE_FLAG='0'
+	</select>
+
+	<!-- 받은 메일 목록 조회 -->
+	<!-- 메일 삭제 여부가 0 이면서, 메일 수신자가 본인인 쿼리를 메일 발송 최신 순으로 정렬하여 rownum 순번을 매김 -->
+	<select id="selectReceptionMailList" resultMap="mailMap" parameterType="PaginationInfo">
+		SELECT A.*, E.EMP_CD
+			FROM (
+			    SELECT
+			        ROWNUM RNUM,
+			        A1.MR_RECEIVER,
+			        A1.MR_IMPO_YN,
+			        A1.MAIL_DELETE_FLAG,
+			        A1.MR_READ_YN,
+			        A1.MAIL_CD,
+			        A1.MAIL_SJ,
+			        A1.MAIL_CN,
+			        A1.MAIL_TRNSMIS_DT,
+			        A1.MAIL_SENDER,
+			        A1.EMP_NAME,
+			        A1.EMP_RANK,
+			        A1.DEPT_CD,
+			        A1.EMP_PROFILE_IMG,
+			        A1.EMP_MAIL,
+			        A1.EMP_POSITION,
+			        A1.EMP_EMAIL_SECOND,
+			        A1.COMMON_CODE_SJ,
+			        A1.DEPT_NAME
+			    FROM (
+			        SELECT
+			            R.MR_RECEIVER,
+			            R.MR_IMPO_YN,
+			            R.MAIL_DELETE_FLAG,
+			            R.MR_READ_YN,
+			            R.MAIL_CD,
+			            M.MAIL_SJ,
+			            M.MAIL_CN,
+			            M.MAIL_TRNSMIS_DT,
+			            M.MAIL_SENDER,
+			            E.EMP_NAME,
+			            E.EMP_RANK,
+			            E.DEPT_CD,
+			            E.EMP_PROFILE_IMG,
+			            E.EMP_MAIL,
+			            E.EMP_POSITION,
+			            E.EMP_EMAIL_SECOND,
+			            C.COMMON_CODE_SJ,
+			            D.DEPT_NAME
+			        FROM
+			            MAIL_RECEPTION R
+			        INNER JOIN MAIL_TB M ON M.MAIL_CD = R.MAIL_CD
+			        INNER JOIN EMPLOYEE E ON E.EMP_CD = M.MAIL_SENDER
+			        INNER JOIN COMMON_CODE C ON E.EMP_RANK = C.COMMON_CODE_CD
+			        INNER JOIN DEPT D ON E.DEPT_CD = D.DEPT_CD
+			        WHERE
+			            R.MR_RECEIVER = #{variousCondition.empCd}
+			            AND R.MAIL_DELETE_FLAG = '0'
+			        ORDER BY M.MAIL_TRNSMIS_DT DESC
+			    ) A1
+			) A
+			INNER JOIN EMPLOYEE E ON E.EMP_CD = A.MAIL_SENDER
+			<![CDATA[ WHERE A.RNUM BETWEEN #{startRow} AND #{endRow}]]>
+	</select>
+
+	<!-- =================================== 발신 메일 목록 조회 ================================ -->
+	<!-- 보낸 메일함 페이징을 위한 총 레코드수 조회 -->
+	<select id="selectSentTotalRecord" resultType="int" parameterType="PaginationInfo">
+		SELECT
+			COUNT(*)
+		FROM
+			MAIL_TB
+		WHERE
+			MAIL_SENDER=#{variousCondition.empCd} AND MAIL_DELETE_FLAG='0'
+	</select>
+
+	<!-- 보낸 메일 목록 조회 리스트 -->
+	<select id="selectSentMailList" resultMap="mailMap" parameterType="PaginationInfo">
+		SELECT A.* , E.EMP_CD
+		FROM (
+            SELECT ROWNUM RNUM,B.*
+            FROM
+			(SELECT
+				
+				M.MAIL_CD,
+				M.MAIL_SJ,
+				M.MAIL_CN,
+				M.MAIL_TRNSMIS_DT,
+				M.MAIL_SENDER,
+				M.MAIL_SAVE_YN,
+				M.MAIL_DELETE_FLAG,
+				M.MR_IMPO_YN,
+				E.EMP_NAME,
+				E.EMP_RANK,
+				E.DEPT_CD,
+				E.EMP_MAIL,
+				E.EMP_POSITION,
+				E.EMP_EMAIL_SECOND,
+				C.COMMON_CODE_SJ,
+				D.DEPT_NAME
+			FROM
+			MAIL_TB M
+				INNER JOIN EMPLOYEE E ON M.MAIL_SENDER = E.EMP_CD
+				INNER JOIN COMMON_CODE C ON E.EMP_RANK=C.COMMON_CODE_CD
+				INNER JOIN DEPT D ON E.DEPT_CD=D.DEPT_CD
+			WHERE M.MAIL_SENDER =  #{variousCondition.empCd}  AND M.MAIL_DELETE_FLAG = '0'
+			order by M.MAIL_TRNSMIS_DT desc
+            )B
+			) A
+		INNER JOIN EMPLOYEE E ON E.EMP_CD = A.MAIL_SENDER
+		<![CDATA[ WHERE A.RNUM BETWEEN #{startRow} AND #{endRow}]]>
+	</select>
+	
+	<select id="selectReceptionList" parameterType="String" resultType="MailReceptionVO">
+		SELECT 
+			MR_RECEIVER
+			, MAIL_CD
+			, FN_GET_DEPT_NAME(MR_RECEIVER) "rDeptName" /* 수신자 부서명 */
+		    , FN_GET_EMP_NAME(MR_RECEIVER) "rEmpName" /* 수신자 이름 */
+		    , FN_GET_EMP_RANK_NM(MR_RECEIVER) "rEmpRank" /* 수신자 직급명 */
+		    , FN_GET_EMP_IMG(MR_RECEIVER) "rEmpProfileImg" /* 수신자 프로필 이미지 */
+		 FROM
+		 	MAIL_RECEPTION
+	 	WHERE 
+	 		MAIL_CD=#{mailCd}
+	</select>
+	
+	<!-- =================================== 휴지통 메일 목록 조회 ================================ -->
+	<!-- 휴지통 페이징을 위한 총 레코드수 조회 -->
+	<select id="selectTrashTotalRecord" parameterType="PaginationInfo" resultType="int">
+		SELECT COUNT(*) FROM (
+		    SELECT 
+		        R.MR_RECEIVER /* 수신자 */
+		        , R.MAIL_CD /* 메일코드 */
+		        , R.MR_IMPO_YN /* 수신자지정 중요여부 */ "rImpo"
+		        , R.MAIL_DELETE_FLAG "rDelete"/* 수신자지정 삭제 여부 */
+		        , R.MR_READ_YN /* 읽음여부 */ 
+		        , TB.MAIL_SJ /* 메일제목 */
+		        , TB.MAIL_CN /* 메일내용 */
+		        , TB.MAIL_TRNSMIS_DT /* 메일발송시간 */
+		        , TB.MAIL_SENDER /* 발신자 사번 */
+		        , TB.MAIL_SAVE_YN /* 임시저장메일 여부 */
+		        , TB.MAIL_DELETE_FLAG /* 발신자지정 삭제 여부 */
+		        , TB.MR_IMPO_YN /* 발신자지정 중요여부 */
+		        , ROWNUM AS RNUM
+		        , FN_GET_DEPT_NAME(R.MR_RECEIVER) "rDeptName" /* 수신자 부서명 */
+		        , FN_GET_EMP_NAME(R.MR_RECEIVER) "rEmpName" /* 수신자 이름 */
+		        , FN_GET_EMP_RANK_NM(R.MR_RECEIVER) "rEmpRank" /* 수신자 직급명 */
+		        , FN_GET_DEPT_NAME(TB.MAIL_SENDER) "sDeptName" /* 발신자 부서명 */ 
+		        , FN_GET_EMP_NAME(TB.MAIL_SENDER) "sEmpName" /* 발신자 이름 */
+		        , FN_GET_EMP_RANK_NM(TB.MAIL_SENDER) "sEmpRank" /* 발신자 직급명 */ 
+		    FROM
+		        MAIL_RECEPTION R
+		        LEFT OUTER JOIN MAIL_TB TB ON R.MAIL_CD = TB.MAIL_CD
+		    WHERE (R.MR_RECEIVER=#{variousCondition.empCd} AND R.MAIL_DELETE_FLAG='1')
+		        OR (TB.MAIL_SENDER =#{variousCondition.empCd} AND TB.MAIL_DELETE_FLAG='1'))
+	</select>
+	
+	<!-- 삭제처리된 수신메일 & 발신메일 -->
+	<select id="selectTrashMailList" parameterType="PaginationInfo" resultMap="mailMap">
+		SELECT A.*
+						FROM
+						    (SELECT 
+						        R.MR_RECEIVER /* 수신자 */
+						        , R.MAIL_CD /* 메일코드 */
+						        , R.MR_IMPO_YN /* 수신자지정 중요여부 */ "rImpo"
+						        , R.MAIL_DELETE_FLAG "rDelete"/* 수신자지정 삭제 여부 */
+						        , R.MR_READ_YN /* 수신자지정 읽음여부 */ 
+						        , TB.MAIL_SJ /* 메일제목 */
+						        , TB.MAIL_CN /* 메일내용 */
+						        , TB.MAIL_TRNSMIS_DT /* 메일발송일시 */
+						        , TB.MAIL_SENDER /* 발신자 사번 */
+						        , TB.MAIL_SAVE_YN /* 임시저장메일 여부 */
+						        , TB.MAIL_DELETE_FLAG /* 발신자지정 삭제 여부 */
+						        , TB.MR_IMPO_YN /* 발신자지정 중요여부 */
+						        , ROWNUM AS RNUM
+			                    , FN_GET_DEPT_NAME(R.MR_RECEIVER) "rDeptName" /* 수신자 부서명 */
+			                    , FN_GET_EMP_NAME(R.MR_RECEIVER) "rEmpName" /* 수신자 이름 */
+			                    , FN_GET_EMP_RANK_NM(R.MR_RECEIVER) "rEmpRank" /* 수신자 직급명 */
+                                , FN_GET_EMP_IMG(R.MR_RECEIVER) "rEmpProfileImg" /* 수신자 프로필 이미지 */
+			                    , FN_GET_DEPT_NAME(TB.MAIL_SENDER) "sDeptName" /* 발신자 부서명 */ 
+			                    , FN_GET_EMP_NAME(TB.MAIL_SENDER) "sEmpName" /* 발신자 이름 */
+			                    , FN_GET_EMP_RANK_NM(TB.MAIL_SENDER) "sEmpRank" /* 발신자 직급명 */
+                                , FN_GET_EMP_IMG(TB.MAIL_SENDER) "sEmpProfileImg" /* 발신자 프로필 이미지 */
+						    FROM
+						        MAIL_RECEPTION R
+						        LEFT OUTER JOIN MAIL_TB TB ON R.MAIL_CD = TB.MAIL_CD
+						    WHERE 
+						    	(R.MR_RECEIVER=#{variousCondition.empCd} AND R.MAIL_DELETE_FLAG='1')
+						        OR 
+						        (TB.MAIL_SENDER =#{variousCondition.empCd} AND TB.MAIL_DELETE_FLAG='1' )
+						    ) A
+			<![CDATA[ WHERE A.RNUM BETWEEN #{startRow} AND #{endRow}]]>
+			ORDER BY TO_DATE(MAIL_TRNSMIS_DT, 'YYYY-MM-DD HH24:MI:SS') DESC
+	</select>
+	
+	<!-- =================================== 중요 메일 목록 조회 ================================ -->
+	<!-- 중요처리된 수신메일 & 중요처리된 발신 메일의 갯수 -->
+	<select id="selectImportantTotalRecord" parameterType="PaginationInfo" resultType="int">
+		SELECT COUNT(*) FROM (
+		    SELECT 
+		        R.MR_RECEIVER /* 수신자 */
+		        , R.MAIL_CD /* 메일코드 */
+		        , R.MR_IMPO_YN /* 수신자지정 중요여부 */ "rImpo"
+		        , R.MAIL_DELETE_FLAG "rDelete"/* 수신자지정 삭제 여부 */
+		        , R.MR_READ_YN /* 읽음여부 */ 
+		        , TB.MAIL_SJ /* 메일제목 */
+		        , TB.MAIL_CN /* 메일내용 */
+		        , TB.MAIL_TRNSMIS_DT /* 메일발송시간 */
+		        , TB.MAIL_SENDER /* 발신자 사번 */
+		        , TB.MAIL_SAVE_YN /* 임시저장메일 여부 */
+		        , TB.MAIL_DELETE_FLAG /* 발신자지정 삭제 여부 */
+		        , TB.MR_IMPO_YN /* 발신자지정 중요여부 */
+		        , ROWNUM AS RNUM
+		        , FN_GET_DEPT_NAME(R.MR_RECEIVER) "rDeptName" /* 수신자 부서명 */
+		        , FN_GET_EMP_NAME(R.MR_RECEIVER) "rEmpName" /* 수신자 이름 */
+		        , FN_GET_EMP_RANK_NM(R.MR_RECEIVER) "rEmpRank" /* 수신자 직급명 */
+		        , FN_GET_DEPT_NAME(TB.MAIL_SENDER) "sDeptName" /* 발신자 부서명 */ 
+		        , FN_GET_EMP_NAME(TB.MAIL_SENDER) "sEmpName" /* 발신자 이름 */
+		        , FN_GET_EMP_RANK_NM(TB.MAIL_SENDER) "sEmpRank" /* 발신자 직급명 */ 
+		    FROM
+		        MAIL_RECEPTION R
+		        LEFT OUTER JOIN MAIL_TB TB ON R.MAIL_CD = TB.MAIL_CD
+		    WHERE (R.MR_RECEIVER=#{variousCondition.empCd} AND R.MAIL_DELETE_FLAG='0' AND R.MR_IMPO_YN='Y')
+		        OR (TB.MAIL_SENDER =#{variousCondition.empCd} AND TB.MAIL_DELETE_FLAG='0' AND TB.MR_IMPO_YN='Y' AND TB.MAIL_SAVE_YN='N'))
+	</select>
+	
+	<!-- 중요처리된 수신메일 & 중요처리된 발신 메일 목록 -->
+	<select id="selectImportantMailList" parameterType="PaginationInfo" resultMap="simpleMailVOAMp">
+			SELECT A.*
+						FROM
+						    (SELECT 
+						        R.MR_RECEIVER /* 수신자 */
+						        , R.MAIL_CD /* 메일코드 */
+						        , R.MR_IMPO_YN /* 수신자지정 중요여부 */ "rImpo"
+						        , R.MAIL_DELETE_FLAG "rDelete"/* 수신자지정 삭제 여부 */
+						        , R.MR_READ_YN /* 수신자지정 읽음여부 */ 
+						        , TB.MAIL_SJ /* 메일제목 */
+						        , TB.MAIL_CN /* 메일내용 */
+						        , TB.MAIL_TRNSMIS_DT /* 메일발송일시 */
+						        , TB.MAIL_SENDER /* 발신자 사번 */
+						        , TB.MAIL_SAVE_YN /* 임시저장메일 여부 */
+						        , TB.MAIL_DELETE_FLAG /* 발신자지정 삭제 여부 */
+						        , TB.MR_IMPO_YN /* 발신자지정 중요여부 */
+						        , ROWNUM AS RNUM
+			                    , FN_GET_DEPT_NAME(R.MR_RECEIVER) "rDeptName" /* 수신자 부서명 */
+			                    , FN_GET_EMP_NAME(R.MR_RECEIVER) "rEmpName" /* 수신자 이름 */
+			                    , FN_GET_EMP_RANK_NM(R.MR_RECEIVER) "rEmpRank" /* 수신자 직급명 */
+                                , FN_GET_EMP_IMG(R.MR_RECEIVER) "rEmpProfileImg" /* 수신자 프로필 이미지 */
+			                    , FN_GET_DEPT_NAME(TB.MAIL_SENDER) "sDeptName" /* 발신자 부서명 */ 
+			                    , FN_GET_EMP_NAME(TB.MAIL_SENDER) "sEmpName" /* 발신자 이름 */
+			                    , FN_GET_EMP_RANK_NM(TB.MAIL_SENDER) "sEmpRank" /* 발신자 직급명 */
+                                , FN_GET_EMP_IMG(TB.MAIL_SENDER) "sEmpProfileImg" /* 발신자 프로필 이미지 */
+						    FROM
+						        MAIL_RECEPTION R
+						        LEFT OUTER JOIN MAIL_TB TB ON R.MAIL_CD = TB.MAIL_CD
+						    WHERE 
+						    	(R.MR_RECEIVER=#{variousCondition.empCd} AND R.MAIL_DELETE_FLAG='0' AND R.MR_IMPO_YN='Y')
+						        OR 
+						        (TB.MAIL_SENDER =#{variousCondition.empCd} AND TB.MAIL_DELETE_FLAG='0' AND TB.MR_IMPO_YN='Y' AND TB.MAIL_SAVE_YN='N')
+						    ) A
+			<![CDATA[ WHERE A.RNUM BETWEEN #{startRow} AND #{endRow}]]>
+			ORDER BY TO_DATE(MAIL_TRNSMIS_DT, 'YYYY-MM-DD HH24:MI:SS') DESC
+	</select>
+
+	<insert id="insertMailTb" parameterType="MailVO"
+		useGeneratedKeys="true" keyProperty="mailCd">
+		INSERT INTO
+			MAIL_TB (
+			MAIL_CD,
+			MAIL_SJ,
+			MAIL_CN,
+			MAIL_TRNSMIS_DT,
+			MAIL_SENDER,
+			MAIL_SAVE_YN,
+			MAIL_DELETE_FLAG,
+			MR_IMPO_YN
+		) VALUES (
+			TO_CHAR(SYSDATE,'YYMMDD')||TO_CHAR(MAIL_SEQ.NEXTVAL,'FM0000'),
+			#{mailSj,jdbcType=VARCHAR},
+			#{mailCn,jdbcType=CLOB},
+			(SELECT
+				TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS') FROM DUAL),
+				#{mailSender,jdbcType=VARCHAR},
+				'N',
+				'0',
+				'N'
+			)
+	</insert>
+
+	<insert id="insertMailReception" parameterType="MailReceptionVO">
+
+		<selectKey keyProperty="mailCd" resultType="String"
+			order="BEFORE">
+			SELECT 
+				TO_CHAR(SYSDATE,'YYMMDD')||TO_CHAR(MAIL_SEQ.CURRVAL,'FM0000') AS MAIL_CD 
+			FROM
+				DUAL
+		</selectKey>
+		INSERT INTO MAIL_RECEPTION (
+			MR_RECEIVER,
+			MAIL_CD,
+			MR_IMPO_YN,
+			MAIL_DELETE_FLAG,
+			MR_READ_YN
+		) VALUES (
+			#{mrReceiver,jdbcType=VARCHAR},
+			#{mailCd,jdbcType=VARCHAR},
+			'N',
+			'0',
+			'N'
+			)
+	</insert>
+
+	<select id="selectMailAttach" parameterType="String" resultType="MailAttachVO">
+		SELECT
+		    MAIL_CD,
+		    MAIL_ATTACH_NO,
+		    MAIL_ATTACH_NAME,
+		    MAIL_ATTACH_SAVENAME,
+		    MAIL_ATTACH_MIME,
+		    MAIL_ATTACH_SIZE,
+		    MAIL_ATTACH_FANCYSIZE
+		FROM
+		    MAIL_ATTACH
+		WHERE 
+		    MAIL_ATTACH_NO=#{mailAttchNo}
+	</select>
+
+	<insert id="insertMailAttach" parameterType="MailAttachVO">
+		<selectKey keyProperty="mailCd" resultType="String"
+			order="BEFORE">
+			SELECT
+					TO_CHAR(SYSDATE,'YYMMDD')||TO_CHAR(MAIL_SEQ.CURRVAL,'FM0000') AS MAIL_CD
+			FROM
+				DUAL
+		</selectKey>
+		INSERT INTO mail_attach (
+			mail_cd,
+			mail_attach_no,
+			mail_attach_name,
+			mail_attach_savename,
+			mail_attach_mime,
+			mail_attach_size,
+			mail_attach_fancysize
+		) VALUES (
+			#{mailCd,jdbcType=VARCHAR}
+			,#{mailCd}||TO_CHAR(MAILATTACH_SEQ.NEXTVAL,'FM000')
+			,#{mailAttachName,jdbcType=VARCHAR}
+			,#{mailAttachSavename,jdbcType=VARCHAR}
+			,#{mailAttachMime,jdbcType=VARCHAR}
+			, #{mailAttachSize,jdbcType=NUMERIC}
+			, #{mailAttachFancysize,jdbcType=VARCHAR}
+		)
+	</insert>
+
+	<select id="selectMailDetail" parameterType="String" resultMap="mailMap">
+	SELECT
+			M.MAIL_CD,
+			M.MAIL_SJ,
+			M.MAIL_CN,
+			M.MAIL_TRNSMIS_DT,
+			M.MAIL_SENDER,
+			M.MAIL_SAVE_YN,
+			M.MAIL_DELETE_FLAG,
+			M.MR_IMPO_YN,
+			E.EMP_CD ,
+			E.EMP_NAME ,
+            E.EMP_RANK,
+			E.DEPT_CD ,
+			E.EMP_MAIL ,
+			E.EMP_PROFILE_IMG ,
+			E.EMP_EXTENSION ,
+			E.EMP_POSITION ,
+			E.EMP_EMAIL_SECOND,
+            D.DEPT_NAME,
+            CC.COMMON_CODE_SJ,
+            A.MAIL_CD,
+            A.MAIL_ATTACH_NO,
+            A.MAIL_ATTACH_NAME,
+            A.MAIL_ATTACH_SAVENAME,
+            A.MAIL_ATTACH_MIME,
+            A.MAIL_ATTACH_SIZE,
+            A.MAIL_ATTACH_FANCYSIZE
+		FROM
+			MAIL_TB M
+				INNER JOIN EMPLOYEE E ON M.MAIL_SENDER = E.EMP_CD
+		        INNER JOIN DEPT D ON E.DEPT_CD=D.DEPT_CD
+		        INNER JOIN COMMON_CODE CC ON CC.COMMON_CODE_CD=E.EMP_RANK
+		        INNER JOIN MAIL_ATTACH A ON A.MAIL_CD=M.MAIL_CD
+		WHERE
+			M.MAIL_CD=#{mailCd}
+	</select>
+	
+	<select id="selectReceptionMail" resultType="MailReceptionVO" parameterType="Map">
+	  SELECT 
+			MR_RECEIVER
+			,MAIL_CD
+			,MR_IMPO_YN
+			,MAIL_DELETE_FLAG
+			,MR_READ_YN
+	  FROM
+	  		MAIL_RECEPTION
+	  WHERE 
+	  		MAIL_CD=#{mailCd}  AND MR_RECEIVER=#{loginUser}
+	</select>
+	
+	<select id="simpleSelectSentMail" resultType="MailVO" parameterType="String">
+		SELECT
+		    MAIL_CD,
+		    MAIL_SJ,
+		    MAIL_CN,
+		    MAIL_TRNSMIS_DT,
+		    MAIL_SENDER,
+		    MAIL_SAVE_YN,
+		    MAIL_DELETE_FLAG,
+		    MR_IMPO_YN
+		FROM
+		    MAIL_TB
+		WHERE
+		    MAIL_CD=#{mailCd} 
+	</select>
+	
+	<!-- 받은 메일 중요메일표시 업데이트 -->
+	<update id="updateReceivedMailImportant" parameterType="hashmap">
+		UPDATE 
+			mail_reception
+		SET
+			MR_IMPO_YN = #{mrImpoYn,jdbcType=VARCHAR}
+		WHERE
+			MAIL_CD=#{mailCd}
+	</update>
+	
+	<update id="updateSendMailImportant" parameterType="hashmap">
+		UPDATE
+			 mail_tb
+		SET
+			MAIL_SJ=#{mailSj,jdbcType=VARCHAR}
+			,MAIL_CN=#{mailCn,jdbcType=CLOB}
+			,MAIL_TRNSMIS_DT=#{mailTrnsmisDt,jdbcType=VARCHAR}
+			,MAIL_SAVE_YN=#{mailSaveYn,jdbcType=VARCHAR}
+			,MAIL_DELETE_FLAG=#{mailDeleteFlag,jdbcType=VARCHAR}
+			,MR_IMPO_YN=#{mrImpoYn,jdbcType=VARCHAR}
+		WHERE
+		      mail_cd = #{mailCd}
+	</update>
+	
+	<!-- 보낸 메일함의 임시저장여부, 삭제여부 (또는 임시저장 시, 제목, 내용, 일시) 수정을 위한 쿼리 -->
+	<update id="updateMail" parameterType="MailVO">
+		UPDATE 
+			MAIL_TB
+		SET
+			MAIL_SJ=#{mailSj,jdbcType=VARCHAR}
+			,MAIL_CN=#{mailCn,jdbcType=CLOB}
+			,MAIL_TRNSMIS_DT=#{mailTrnsmisDt,jdbcType=VARCHAR}
+			,MAIL_SAVE_YN=#{mailSaveYn,jdbcType=VARCHAR}
+			,MAIL_DELETE_FLAG=#{mailDeleteFlag,jdbcType=VARCHAR}
+			,MR_IMPO_YN=#{mrImpoYn,jdbcType=VARCHAR}
+		WHERE
+			MAIL_CD=#{mailCd} AND MAIL_SENDER=#{loginUser}
+	</update>
+	
+	<!-- 받은 메일함의 중요여부, 삭제여부, 읽음여부 수정을 위한 쿼리 -->
+	<update id="updateReceptionMail" parameterType="MailReceptionVO">
+		UPDATE 
+			MAIL_RECEPTION
+		SET
+			MR_IMPO_YN = #{mrImpoYn,jdbcType=VARCHAR}
+			,MAIL_DELETE_FLAG = #{mailDeleteFlag,jdbcType=VARCHAR}
+			,MR_READ_YN = #{mrReadYn,jdbcType=VARCHAR}
+		WHERE
+			MAIL_CD=#{mailCd} AND MR_RECEIVER=#{loginUser}
+	</update>
+	
+</mapper>

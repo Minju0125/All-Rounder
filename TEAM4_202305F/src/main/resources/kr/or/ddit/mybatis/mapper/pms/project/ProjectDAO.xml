@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ <mapper namespace="kr.or.ddit.pms.project.dao.ProjectDAO"> 
+ 
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 8.}     송석원     최초작성               -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+	<resultMap type="ProjectVO" id="projectMap" autoMapping="true">
+		<id property="proSn" column="PRO_SN" />
+		<result property="proSn" column="PRO_SN" /> 
+		<association  property="emp"  javaType="EmployeeVO" autoMapping="true" >
+			<id property="empCd" column="EMP_CD"/>    
+		  </association> 
+		<collection property="pjobList"  ofType="PjobVO" autoMapping="true" >    
+			<id property="jobSn" column="JOB_SN"/>  
+		</collection> 
+		<collection property="pmemberList"  ofType="PmemberVO" autoMapping="true" />    
+		   
+	</resultMap>  
+  
+ 
+  
+	<select id="selectProjectList" resultMap="projectMap" parameterType="ProjectVO"> 
+		SELECT
+	    P.PRO_SN,
+	    P.PRO_NM, 
+	    P.PRO_BDATE,
+	    P.PRO_EDATE,
+	    P.PRO_STTUS,
+	    P.PRO_PROGRS
+	FROM
+	    PROJECT P
+	INNER JOIN
+	    PMEMBER M
+	ON
+	    P.PRO_SN = M.PRO_SN
+	WHERE
+	    M.EMP_CD =  #{empCd} 
+
+    
+<!--          SELECT -->
+<!--     P.PRO_SN, -->
+<!--     P.PRO_NM, -->
+<!--     P.PRO_BDATE, -->
+<!--     P.PRO_EDATE, -->
+<!--     P.PRO_STTUS, -->
+<!--     P.PRO_PROGRS, -->
+<!--     ( -->
+<!--         SELECT COUNT(J.JOBU_SN) -->
+<!--         FROM PJOB J -->
+<!--         WHERE J.PRO_SN = P.PRO_SN -->
+<!--         AND J.JOBU_SN IS NOT NULL -->
+<!--     ) AS JOBU_COUNT, -->
+<!--     ( -->
+<!--         SELECT COUNT(J.JOBU_SN) -->
+<!--         FROM PJOB J -->
+<!--         WHERE J.PRO_SN = #{proSn} -->
+<!--         AND J.JOBU_SN IS NOT NULL -->
+<!--         AND J.JOB_STCD = '5' -->
+<!--     ) AS COMPLETED_COUNT  -->
+<!-- FROM -->
+<!--     PROJECT P -->
+<!-- INNER JOIN -->
+<!--     PMEMBER M ON P.PRO_SN = M.PRO_SN -->
+<!-- WHERE -->
+<!--     M.EMP_CD = #{empCd} -->
+	
+	</select>
+	
+	<select id="selectEmployeeCode" resultType="String" parameterType="PmemberVO">
+    SELECT EMP_CD
+    	FROM PMEMBER 
+    WHERE PRO_SN = #{proSn} AND PRO_LEADER = 'Y'
+	</select>
+	
+	<select id="selectJACompleteCount" resultType="String" parameterType="PjobVO">
+	 SELECT 
+            COUNT(JOBU_SN)
+            FROM PJOB
+            WHERE
+            PRO_SN= #{proSn}
+            AND JOBU_SN IS NOT NULL 
+	</select>
+	
+	<select id="selectJobCompleteCount" resultType="String" parameterType="PjobVO">
+	SELECT
+            COUNT(JOBU_SN)
+            FROM PJOB
+            WHERE PRO_SN= #{proSn} 
+            AND JOBU_SN IS NOT NULL
+            AND JOB_STCD = '5' 
+	</select>
+
+	
+	
+	
+	<update id="updateProjectStt" parameterType="ProjectVO"> 
+		
+		UPDATE PROJECT
+		SET 
+			PRO_STTUS = #{proSttus, jdbcType=VARCHAR}
+		WHERE  PRO_SN = #{proSn}
+    	
+	
+	</update>
+	
+	
+	<select id="selectCompleteProject"  resultMap="projectMap" parameterType="ProjectVO">
+		select*
+			from project
+			where pro_sn in(
+			select pro_sn
+			from pjob
+			where job_stcd != 5
+			) 
+	</select>
+	
+
+
+</mapper>

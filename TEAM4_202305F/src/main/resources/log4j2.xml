@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- appender : 로그 메시지 기록 매체. -->
+<!-- log message : code 상에서 결정. -->
+<!-- layout :  로그 메시지 형식 -->
+<!-- logger : 로그 메시지 기록자 -->
+<!-- level : 로그 메시지 기록 level (trace - debug - info - warn - error - fatal) -->
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+  	<Logger name="org.springframework" level="info" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+  	<Logger name="org.springframework.web" level="info" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+  	<Logger name="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping" level="trace" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+  	<Logger name="kr.or.ddit" level="info" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+  	<Logger name="jdbc.sqltiming" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+  	<Logger name="jdbc.resultsettable" level="debug" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+  	<Logger name="org.apache.tiles" level="trace" additivity="false">
+      <AppenderRef ref="Console"/>
+    </Logger>
+    <Root level="error">
+      <AppenderRef ref="Console"/>
+    </Root>
+  </Loggers>
+</Configuration>

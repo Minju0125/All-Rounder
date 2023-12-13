@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 30.  오경석     최초작성               -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+<mapper namespace="kr.or.ddit.groupware.board.freeboard.dao.FreeBoardDAO">
+	
+	<resultMap type="BoardVO" id="boardMap" autoMapping="true">
+		<id property="bbsNo" column="BBS_NO"/>
+		<result property="bbsNo" column="BBS_NO"/>
+		<collection property="boardFileList" ofType="BoardFileVO" autoMapping="true" />
+	</resultMap>
+	
+	<!-- 페이징을 위한 총 레코드 수 조회 -->
+	<select id="selectTotalFree" parameterType="PaginationInfo" resultType="int">
+		SELECT COUNT(*) 
+		FROM BBS 
+		WHERE 
+			BBS_CATEGORY='F'
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+				AND	INSTR(BBS_SJ, #{simpleCondition.searchWord}) > 0
+			</if>	
+	</select>
+	
+		<!-- 페이징을 위한 공지사항 리스트 조회 -->
+	<select id="selectFreeBoardList" parameterType="PaginationInfo" resultMap="boardMap">
+		SELECT BOARDVIEW.* 
+			FROM ( SELECT A.*, ROWNUM RNUM
+			    FROM(
+			        SELECT
+			            A.BBS_NO							/* 게시판번호 */
+			            , A.BBS_SJ							/* 게시판제목 */
+			            , A.BBS_CN							/* 게시판내용 */
+			            , A.BBS_RGSDE					/* 등록일자 */
+			            , A.EMP_CD						/* 작성자 */
+			            , A.BBS_RDCNT			/* 조회수 */
+			            , A.BBS_CATEGORY			/* 게시판 카테고리 */
+			            , B.FILE_CODE		/* 첨부파일코드 */
+			            , B.FILE_NAME		/* 파일이름 */
+			            , B.FILE_SAVENAME	/* 파일저장이름 */
+			            , B.FILE_MIME		/* 파일타입 */
+			            , B.FILE_SIZE		/* 파일크기 */
+			            , B.FILE_FANCYSIZE	/* 파일팬시크기 */
+			            , FN_GET_EMP_NAME(A.EMP_CD) EMP_NAME /*작성자 이름*/
+			        FROM
+			            BBS A LEFT OUTER JOIN BBS_FILE B ON(A.BBS_NO = B.BBS_NO)
+			        WHERE
+			            A.BBS_CATEGORY='F'  
+			        <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+						AND	INSTR(BBS_SJ, #{simpleCondition.searchWord}) > 0
+					</if>	
+			        ORDER BY A.BBS_RGSDE DESC -- 최근 등록일자 기준으로 정렬
+			    ) A)  BOARDVIEW
+			<![CDATA[ 
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+			]]> 
+	</select>
+	
+	<resultMap type="BoardVO" id="freeMap" autoMapping="true">
+		<id property="bbsNo" column="BBS_NO"/>
+		<result property="bbsNo" column="BBS_NO"/>
+		<collection property="boardFileList" ofType="BoardFileVO" autoMapping="true" />
+		<collection property="anserList" ofType="AnswerVO" autoMapping="true" />
+	</resultMap>
+	
+	<select id="selectFreeBoard" parameterType="int" resultMap="freeMap"> 
+		SELECT
+		    A.BBS_NO							
+		    , A.BBS_SJ							
+		    , A.BBS_CN						
+		    , A.BBS_RGSDE					
+		    , A.EMP_CD						
+		    , A.BBS_RDCNT			
+		    , A.BBS_CATEGORY			
+		    , B.FILE_CODE		
+		    , B.FILE_NAME		
+		    , B.FILE_SAVENAME	
+		    , B.FILE_MIME		
+		    , B.FILE_SIZE		
+		    , B.FILE_FANCYSIZE	
+		    , FN_GET_EMP_NAME(A.EMP_CD) EMP_NAME 
+		    , C.ANSWER_CODE
+		    , C.ANSWER_WRTER
+		    , C.ANSWER_RGSDE
+		    , C.ANSWER_CN
+		    , C.ANSWER_UPCODE
+		    , (SELECT DISTINCT E.EMP_NAME FROM ANSWER A, EMPLOYEE E WHERE (A.ANSWER_WRTER = E.EMP_CD) AND A.ANSWER_WRTER = C.ANSWER_WRTER) ANSWER_WRTER_NAME 
+		FROM
+		    BBS A
+		    LEFT OUTER JOIN BBS_FILE B ON (A.BBS_NO = B.BBS_NO)
+		    LEFT OUTER JOIN ANSWER C ON (A.BBS_NO = C.BBS_NO)  
+		WHERE
+		    A.BBS_CATEGORY='F' AND A.BBS_NO=#{bbsNo}
+		ORDER BY C.ANSWER_CODE ASC	 	    
+	</select>
+	
+	<select id="answerMax" parameterType="int" resultType="String"> 
+		SELECT
+		    #{bbsNo} || '_' || LPAD(SUBSTR(MAX(A.ANSWER_CODE),5,2)+1, 1, '0')
+		FROM
+		    BBS B, ANSWER A
+		WHERE 
+		    (B.BBS_NO = A.BBS_NO) AND (B.BBS_CATEGORY = 'F' AND B.BBS_NO = #{bbsNo}) AND ANSWER_UPCODE IS NULL
+	</select>
+		
+	<insert id="answerInsert" parameterType="AnswerVO"> 
+		INSERT INTO ANSWER (
+		    ANSWER_CODE,
+		    ANSWER_WRTER,
+		    ANSWER_RGSDE,
+		    ANSWER_CN,
+		    BBS_NO
+		) VALUES (
+		    #{answerCode},
+		    #{answerWrter},
+		    SYSDATE,
+		    #{answerCn},
+		    #{bbsNo}
+		)
+	</insert>
+	 
+	<select id="replyMax" resultType="String" parameterType="String">
+		SELECT (#{answerCode} || LPAD((SUBSTR(MAX(B.ANSWER_CODE),7,1)+1), 2,'_')) ANSWER_CODE
+			FROM ANSWER A, ANSWER B
+			WHERE (A.ANSWER_CODE = B.ANSWER_UPCODE) AND A.ANSWER_CODE = #{answerCode}
+	</select>
+	
+	<insert id="replyInsert" parameterType="AnswerVO"> 
+		INSERT INTO ANSWER (
+		    ANSWER_CODE,
+		    ANSWER_WRTER,
+		    ANSWER_RGSDE,
+		    ANSWER_CN,
+		    BBS_NO,
+		    ANSWER_UPCODE
+		) VALUES (
+		    #{answerCode},
+		    #{answerWrter},
+		    SYSDATE,
+		    #{answerCn},
+		    #{bbsNo},
+		    #{answerUpcode}
+		)	
+	</insert>
+	
+	<delete id="replyAllDelete" parameterType="String">
+		DELETE FROM answer
+		WHERE
+		    answer_upcode = #{answerCode} 
+	</delete>
+	
+	<delete id="answerAllDelete" parameterType="AnswerVO"> 
+		DELETE FROM answer
+		WHERE
+	        answer_code = #{answerCode} AND ANSWER_WRTER = #{answerWrter}
+	</delete>
+	
+	<update id="answerUpdate" parameterType="AnswerVO">
+		UPDATE ANSWER
+		SET
+		    ANSWER_RGSDE = SYSDATE, 
+		    ANSWER_CN = #{answerCn},
+		    ANSWER_UPCODE = #{answerUpcode}
+		WHERE
+	        ANSWER_CODE = #{answerCode} AND ANSWER_WRTER = #{answerWrter}
+	</update>
+		
+	<insert id="freeboardInsert" parameterType="BoardVO" >
+		<selectKey resultType="int" order="BEFORE" keyProperty="bbsNo">
+			SELECT BOARDNO_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+			INSERT INTO BBS (
+			    BBS_NO				/* 게시판번호 */
+			    , BBS_SJ			/* 게시판제목 */
+			    , BBS_CN			/* 게시판내용 */
+			    , BBS_RGSDE			/* 등록일자 */
+			    , EMP_CD			/* 작성자 */
+			    , BBS_CATEGORY		/* 게시판유형 */
+			) VALUES (
+				#{bbsNo,jdbcType=NUMERIC}
+				, #{bbsSj,jdbcType=VARCHAR}
+				, #{bbsCn,jdbcType=VARCHAR}
+				, SYSDATE
+				, #{empCd,jdbcType=VARCHAR}
+				, 'F'
+			)
+	</insert>
+	
+	<insert id="freeboardInsertFile" parameterType="BoardFileVO"> 
+		<selectKey resultType="String" order="BEFORE" keyProperty="fileCode">
+			SELECT 
+				#{bbsNo} || '_' || 
+				LPAD(NVL(TO_NUMBER(SUBSTR(MAX(FILE_CODE), INSTR(MAX(FILE_CODE), '_') + 1)), 0) + 1, 3, '000') 
+			FROM BBS_FILE
+			WHERE FILE_CODE LIKE #{bbsNo} || '_%'
+		</selectKey>
+		INSERT INTO BBS_FILE (
+		    FILE_CODE
+		    , BBS_NO
+		    , FILE_NAME
+		    , FILE_SAVENAME
+		    , FILE_MIME
+		    , FILE_SIZE
+		    , FILE_FANCYSIZE
+		    , FILE_DOWNLOAD
+		) VALUES (
+			#{fileCode,jdbcType=VARCHAR}
+			, #{bbsNo,jdbcType=NUMERIC}
+			, #{fileName,jdbcType=VARCHAR}
+			, #{fileSavename,jdbcType=VARCHAR}
+			, #{fileMime,jdbcType=VARCHAR}
+			, #{fileSize,jdbcType=NUMERIC}
+			, #{fileFancysize,jdbcType=VARCHAR}
+			, #{fileDownload,jdbcType=NUMERIC}
+		)
+	</insert>
+	
+	<update id="rdcntUpdate" parameterType="int">
+		UPDATE bbs
+		SET
+		    BBS_RDCNT = BBS_RDCNT+1
+		WHERE
+	        BBS_NO = #{bbsNo} AND BBS_CATEGORY = 'F'
+	</update>
+</mapper>

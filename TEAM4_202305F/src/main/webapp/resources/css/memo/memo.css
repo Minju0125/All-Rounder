@@ -1,0 +1,92 @@
+@charset "UTF-8";
+
+
+.page-header {
+	margin: 30px;
+}
+
+.memo {
+	background-size: 100% 100%;
+	width: 200px;
+	height: 200px;
+}
+
+.memo .btnClose {
+	font-size: 40px;
+	width: 10px;
+	color: gray;
+	cursor: pointer;
+	float: right;
+	margin-top: -13px;
+	margin-right: 25px;
+}
+.memo .btnClose:hover {
+    cursor: pointer; /* 마우스 커서 모양 변경 */
+    color:red;
+}
+.memo .txtMemo {
+	margin-left: 5px;
+	margin-top: 10px;
+	width: 180px;
+	height: 150px;
+	resize: none;
+	border: 0;
+	outline: none;
+	background-color: transparent;
+}
+
+.memo .txtMemo::-webkit-scrollbar {
+   	width: 10px;
+ 	}
+.memo .txtMemo::-webkit-scrollbar-thumb {
+   	background-color: #FFF;
+   	border-radius: 10px;
+    background-clip: padding-box;
+    border: 2px solid transparent;
+	 }
+.memo .txtMemo::-webkit-scrollbar-track {
+   	background-color: grey;
+   	border-radius: 10px;
+   	box-shadow: inset 0px 0px 5px white;
+}
+
+#openMemo {           
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 18%; /* 모달 너비 조절 */
+	height: 50%; /* 모달 높이 조절 */
+	background-color: white; 
+	display: none;
+	z-index: 1;
+}
+
+.memo .btnCheck {
+	font-size: 26px;
+	width: 10px;
+	color: rgb(0, 0, 0);
+	cursor: pointer;
+	float: right;
+	margin-top: -4px;
+	margin-right: 23px;
+}
+
+button.round_btn{
+	border-radius:100px !important; 
+	width:40px !important; 
+	height:40px !important;
+}
+#memoArea{
+	background: url(http://localhost/freeboardFile/2ded90ab-32c4-4728-9e63-c264c9cdb7b2_%EB%A9%94%EB%AA%A8%EC%9E%A5%EB%B0%B0%EA%B2%BD.png) no-repeat center;
+    width: 100%;
+    height: 738px;
+    margin-top: 0;
+    background-size: contain;
+    position: relative;
+    top: -25px;
+}	
+#openMemo{
+	width: 27%;
+    height: 59%;
+}   

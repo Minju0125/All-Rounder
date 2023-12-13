@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 29.     박민주     최초작성               -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+<mapper
+	namespace="kr.or.ddit.groupware.reservation.confroom.dao.ConfRoomDAO">
+	
+	<resultMap type="ConfRoomReservationVO" id="confRoomReservationMap" autoMapping="true">
+		<id property="confReserveCd" column="CONF_RESERVE_CD"/>
+		<association property="confRoom" javaType="ConfRoomVO" />
+	</resultMap>
+	
+	<resultMap type="ConfRoomReservationVO" id="confRoomReservationMap2" autoMapping="true">
+		<id property="confReserveCd" column="CONF_RESERVE_CD"/>
+		<association property="confRoom" javaType="ConfRoomVO" autoMapping="true"/>
+	</resultMap>
+	
+	<!-- 전체예약 목록 가져오기 -->
+	<select id="selectConfRoomReservationList" parameterType="ConfRoomReservationVO">
+		SELECT
+		    conf_reserve_cd,
+		    conf_reserve_emp_cd,
+		    conf_reserve_pw,
+		    conf_room_cd,
+		    conf_time_cd,
+		    conf_date
+		FROM
+		    conf_room_reservation
+	</select>
+	
+	<!-- 공통코드에서 회의실 시간 코드 가져오기 -->
+	<select id="selectCommonConfTimeCdList">
+		SELECT
+		    COMMON_CODE_CD,
+		    COMMON_CODE_UPPER_CD,
+		    COMMON_CODE_SJ,
+		    COMMON_CODE_ENGL_SJ,
+		    COMMON_CODE_USE_AT
+		FROM
+		    COMMON_CODE
+		WHERE     
+   			COMMON_CODE_UPPER_CD = 'CONF_TIME_CD'    
+	</select>
+	
+	<!-- 회의실 예약 등록 -->
+	<insert id="insertConfRoomReservation" parameterType="ConfRoomReservationVO">
+		<selectKey keyProperty="confReserveCd" order="BEFORE" resultType="String">
+			SELECT 
+			    TO_CHAR(SYSDATE,'YYMMDD')||'C'||LPAD(CONFRESERVATION_SEQ.NEXTVAL,4,0) AS CONF_RESERVE_CD
+			FROM DUAL
+		</selectKey>
+			INSERT INTO conf_room_reservation (
+			    conf_reserve_cd,
+			    conf_reserve_emp_cd,
+			    conf_reserve_pw,
+			    conf_room_cd,
+			    conf_time_cd,
+			    conf_date
+			) VALUES (
+				#{confReserveCd,jdbcType=VARCHAR}
+				, #{confReserveEmpCd,jdbcType=VARCHAR}
+				, #{confReservePw,jdbcType=VARCHAR}
+				, #{confRoomCd,jdbcType=VARCHAR}
+				, #{confTimeCd,jdbcType=VARCHAR}
+				, #{confDate,jdbcType=VARCHAR}
+			)
+	</insert>
+	
+	<!-- 사원한명의 회의실 예약내역 조회 -->
+	<select id="selectMyConfRoomReservationList" parameterType="PaginationInfo" resultMap="confRoomReservationMap2">
+		SELECT * FROM (
+			    SELECT
+			        CR.conf_reserve_cd,
+			        CR.conf_reserve_emp_cd,
+			        CR.conf_reserve_pw,
+			        CR.conf_room_cd,
+			        CR.conf_time_cd,
+			        CR.conf_date,
+			        C.CONF_ROOM_CAPACITY ,
+			        C.CONF_YN ,
+			        C.CONF_ROOM_NM ,
+			        ROWNUM AS rnum,
+			        CC.COMMON_CODE_SJ "confTime"
+			    FROM
+			        conf_room_reservation CR
+			    LEFT OUTER JOIN CONF_ROOM C ON CR.conf_room_cd = C.CONF_ROOM_CD
+			    LEFT OUTER JOIN COMMON_CODE CC ON CC.COMMON_CODE_CD = CR.conf_time_cd
+			    WHERE
+			        CR.conf_reserve_emp_cd = #{variousCondition.empCd}
+			    ORDER BY
+			        CR.conf_date DESC
+			)
+		  <![CDATA[ WHERE rnum BETWEEN #{startRow} AND #{endRow}]]>
+	</select>
+	
+	<!-- 내 예약 목록 페이징 처리를 위한 totalRecord -->
+	<select id="selectTotalRecord">
+		SELECT COUNT(*) 
+		FROM CONF_ROOM_RESERVATION 
+		WHERE 
+			CONF_RESERVE_EMP_CD=#{variousCondition.empCd}
+	</select>
+	
+	<!-- 특정차량의 오늘 차량 예약 목록 조회 -->
+	<select id="selectTodayConfRoomReservationList" resultType="ConfRoomReservationVO" parameterType="String">
+		SELECT
+		    C.CONF_RESERVE_CD
+		    , C.CONF_RESERVE_EMP_CD
+		    , C.CONF_RESERVE_PW
+		    , C.CONF_ROOM_CD
+		    , C.CONF_TIME_CD
+		    , C.CONF_DATE
+		    ,CC.COMMON_CODE_SJ confTime
+		FROM
+		    CONF_ROOM_RESERVATION C
+		    INNER JOIN COMMON_CODE CC
+		    ON CC.COMMON_CODE_CD = C.CONF_TIME_CD
+		WHERE  
+			C.CONF_DATE = TO_CHAR(SYSDATE, 'YYYY-MM-DD') 
+			AND C.CONF_ROOM_CD =   #{confRoomCd}
+	</select>
+	
+	<delete id="deleteConfRoomReservation" parameterType="String">
+		DELETE 
+			FROM CONF_ROOM_RESERVATION
+		WHERE
+   			CONF_RESERVE_CD = #{confroomReserveCd}
+	</delete>
+	
+	<select id="selectReservationPasswordConfRoom" parameterType="String" resultType="String">
+		SELECT 
+				CONF_RESERVE_PW
+		FROM 
+			CONF_ROOM_RESERVATION
+		WHERE
+			CONF_RESERVE_CD = #{confReserveCd}
+	</select>
+
+	
+</mapper>

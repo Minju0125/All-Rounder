@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  Nov 15, 2023}     송석원     최초작성               -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+<mapper
+	namespace="kr.or.ddit.groupware.board.faq.dao.FaqBoardDAO"> 
+	
+	<select id="selectTotalRecord" parameterType="PaginationInfo" resultType="int">
+		SELECT COUNT(*) 
+		FROM BBS 
+		WHERE  
+			BBS_CATEGORY='Q' 
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+				AND	INSTR(BBS_SJ, #{simpleCondition.searchWord}) > 0
+			</if>	
+	</select> 
+	
+	
+	<select id="selectFaqBoardList" parameterType="PaginationInfo" resultType="BoardVO">
+		SELECT BOARDVIEW1.* 
+		FROM ( SELECT A.*, ROWNUM RNUM
+		    FROM(
+		        SELECT
+		            BBS_NO							/* 게시판번호 */
+		            , BBS_SJ							/* 게시판제목 */
+		            , BBS_CN							/* 게시판내용 */
+		            , BBS_RGSDE					/* 등록일자 */
+		            , EMP_CD						/* 작성자 */
+		            , BBS_CATEGORY			/* 게시판 카테고리 */
+		        FROM
+		            BBS
+		        WHERE
+		            BBS_CATEGORY='Q'  
+		        <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+					AND	INSTR(BBS_SJ, #{simpleCondition.searchWord}) > 0
+				</if>	
+		        ORDER BY BBS_RGSDE DESC -- 최근 등록일자 기준으로 정렬
+		    ) A)  BOARDVIEW1
+		<![CDATA[ 
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]> 
+	</select> 
+	
+	<resultMap type="BoardVO" id="boardMap" autoMapping="true">
+		<id property="bbsNo" column="BBS_NO"/>
+		<result property="bbsNo" column="BBS_NO"/>
+	</resultMap> 
+	
+	
+		<!-- faq게시판 글 등록 -->
+	<insert id="insertFaqBoard" parameterType="BoardVO">
+		<selectKey resultType="int" order="BEFORE" keyProperty="bbsNo">
+			SELECT BOARDNO_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+			INSERT INTO BBS (
+			    BBS_NO				/* 게시판번호 */
+			    , BBS_SJ			/* 게시판제목 */
+			    , BBS_CN			/* 게시판내용 */
+			    , BBS_RGSDE			/* 등록일자 */
+			    , EMP_CD			/* 작성자 */
+			    , BBS_CATEGORY		/* 게시판유형 */
+			) VALUES (
+				#{bbsNo,jdbcType=NUMERIC}
+				, #{bbsSj,jdbcType=VARCHAR}
+				, #{bbsCn,jdbcType=VARCHAR}
+				, SYSDATE
+				, #{empCd,jdbcType=VARCHAR}
+				, #{bbsCategory,jdbcType=VARCHAR} 
+			) 
+	</insert>
+	
+	
+	
+	<!-- faq게시판 수정 -->
+	<update id="updateFaqBoard" parameterType="BoardVO">
+		UPDATE BBS
+		SET 
+			BBS_SJ = #{bbsSj,jdbcType=VARCHAR}						/* 게시판제목 */
+		    , BBS_CN = #{bbsCn,jdbcType=VARCHAR}					/* 게시판내용 */
+		WHERE
+			BBS_NO = #{bbsNo}
+	</update>
+	
+	
+	<select id="selectFaqBoard" parameterType="int" resultMap="boardMap">
+		SELECT
+		    A.BBS_NO			/* 게시판번호 */
+		    , A.BBS_SJ			/* 게시판제목 */
+		    , A.BBS_CN			/* 게시판내용 */
+		    , A.BBS_RGSDE		/* 등록일자 */
+		    , A.EMP_CD			/* 작성자 */
+            , B.BBS_NO			/* 게시판번호 */
+		FROM
+		    BBS A LEFT OUTER JOIN BBS_FILE B ON(A.BBS_NO = B.BBS_NO)
+		WHERE  
+		    A.BBS_CATEGORY='Q' AND A.BBS_NO=#{bbsNo} 
+	</select>
+	
+	<delete id="deleteFaqBoard" parameterType="int">
+		DELETE FROM BBS
+		WHERE
+			BBS_NO = #{bbsNo} 
+	</delete> 
+	
+	
+	
+	
+	
+</mapper>

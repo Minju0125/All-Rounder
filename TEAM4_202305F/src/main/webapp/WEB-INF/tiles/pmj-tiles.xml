@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+       "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+       "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+	
+	<definition name="messenger/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/messenger/{1}.jsp" />
+	</definition>
+	
+	<definition name="mail/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/groupware/mail/{1}.jsp" />
+	</definition>
+	
+	<definition name="admin/reservation/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/admin/reservation/{1}.jsp" />
+	</definition>
+	
+	<definition name="reservation/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/groupware/reservation/{1}.jsp" />
+	</definition>
+</tiles-definitions>       

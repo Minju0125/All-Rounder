@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        	수정자     수정내용               -->
+<!--  ==========   		======    ==============        -->
+<!--  2023. 11. 15.      김보영     최초작성               -->
+<!--  2023. 11. 15.      전수진     직원상세보기 추가          -->
+<!--  2023. 11. 20.      김보영     직원CRUD          -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+<mapper namespace="kr.or.ddit.admin.account.dao.AccountDAO">
+ 
+	<resultMap type="EmployeeVO" id="empMap" autoMapping="true">
+		<id property="empCd" column="EMP_CD" />
+		<association property="dept" javaType="DeptVO" autoMapping="true"/>
+		<association property="common" javaType="CommonVO" autoMapping="true"/>
+	</resultMap>
+	
+	
+	
+	<!-- 직원수정 -->
+	<update id="updateEmp" parameterType="EmployeeVO">
+		UPDATE EMPLOYEE
+	SET 
+		EMP_NAME=#{empName}
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(empPw)">
+			, EMP_PW=#{empPw}
+		</if>	
+		, EMP_ZIP=#{empZip}
+		, EMP_ADRES=#{empAdres}
+		, EMP_ADRES_DETAIL=#{empAdresDetail}
+		, EMP_BIRTH=#{empBirth}
+		, EMP_SSN=#{empSsn}
+		, EMP_RANK=#{empRank}
+		, EMP_HIREDATE=#{empHiredate}
+		, DEPT_CD=#{deptCd}
+		, EMP_MAIL=#{empMail}
+		, EMP_TELNO=#{empTelno}
+		, EMP_CRTFC_NO=#{empCrtfcNo}
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(empQr)">
+			, EMP_QR=#{empQr , jdbcType=VARCHAR}
+		</if>	
+		, EMP_EXTENSION=#{empExtension}
+		, EMP_POSITION=#{empPosition}
+		, EMP_EMAIL_SECOND=#{empEmailSecond}
+		, EMP_SUPRR=#{empSuprr}
+		<if test="empSignImg neq null">
+			, EMP_SIGN_IMG=#{empSignImg , jdbcType=BLOB}
+		</if>	
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(empProfileImg)">
+			, EMP_PROFILE_IMG=#{empProfileImg , jdbcType=VARCHAR}
+		</if>	
+	WHERE EMP_CD=#{empCd}
+	
+	</update>
+	
+	<!-- 상급자를 등록하기 위함 -->
+	<select id="selectSuprrList" resultType="EmployeeVO" parameterType="String">
+		SELECT 
+			E.EMP_CD
+			, E.EMP_NAME
+		FROM DEPT D
+		LEFT OUTER JOIN EMPLOYEE E
+		ON D.DEPT_CD = E.DEPT_CD
+		WHERE D.DEPT_CD = #{deptCd}
+	</select>
+	
+	
+	<!--부서조회 -->
+	<select id="selectDeptList" resultType="DeptVO">
+		SELECT
+			DEPT_NAME
+			,DEPT_CD
+		FROM DEPT
+	</select>
+	
+	
+	<!-- 직급리스트 -->
+	<select id="selectRankList" resultType="CommonVO">
+		SELECT 
+			COMMON_CODE_CD
+			, COMMON_CODE_SJ
+		FROM COMMON_CODE
+		WHERE COMMON_CODE_UPPER_CD ='RANK'
+	</select>
+	
+	<!-- 직원삭제 -->
+<!-- 	<delete id="deleteEmp" parameterType="String"> -->
+<!-- 		DELETE FROM EMPLOYEE -->
+<!-- 		WHERE EMP_CD=#{empCd} -->
+<!-- 	</delete> -->
+	
+	<!-- 삭제지만 사실 직원 상태 변경으로 처리 -->
+	<update id="deleteEmp" parameterType="String">
+		UPDATE EMPLOYEE
+		SET   
+			EMP_LOGIN_FLAG='L'
+			, EMP_LEAVEDATE = SYSDATE
+		WHERE EMP_CD=#{empCd}
+	</update>
+	
+	
+	<!-- 직원의 목록 -->	
+	<select id="selectEmpList" resultMap="empMap">
+		SELECT 
+			EMP_CD
+			, E.EMP_PW
+			, E.EMP_NAME
+			, E.EMP_ZIP
+			, E.EMP_ADRES
+			, E.EMP_ADRES_DETAIL
+			, TO_CHAR(TO_DATE(E.EMP_BIRTH,'YYYYMMDD'),'YYYY-MM-DD') AS empBirth
+			, E.EMP_SSN
+			, 
+			(
+				SELECT 
+					COMMON_CODE_SJ
+				FROM COMMON_CODE
+				WHERE E.EMP_RANK= COMMON_CODE_CD 
+			) AS EMP_RANK
+			, TO_CHAR(TO_DATE(E.EMP_HIREDATE,'YYYYMMDD'),'YYYY-MM-DD') AS empHiredate
+			, E.DEPT_CD
+			, E.EMP_MAIL
+			, E.EMP_LOGIN_FLAG
+			, E.EMP_PROFILE_IMG
+			, E.EMP_TELNO
+			, E.EMP_SIGN_IMG
+			, E.EMP_CRTFC_NO
+			, E.EMP_QR
+			, E.EMP_EXTENSION
+			, E.EMP_POSITION
+			, E.EMP_EMAIL_SECOND
+			, E.EMP_SUPRR
+			, D.DEPT_NAME
+		FROM EMPLOYEE E
+		LEFT OUTER JOIN DEPT D
+		ON D.DEPT_CD = E.DEPT_CD
+		<![CDATA[
+		WHERE EMP_LOGIN_FLAG <> 'L'
+		 ]]>
+	</select>
+	
+	
+	<select id="selectEmployee" resultMap="empMap" parameterType="String">
+		SELECT
+		    E.EMP_CD, E.EMP_PW, E.EMP_NAME, E.EMP_ZIP, E.EMP_ADRES
+		    , E.EMP_ADRES_DETAIL, E.EMP_BIRTH, E.EMP_SSN, E.EMP_RANK
+		    , E.EMP_HIREDATE, E.DEPT_CD, E.EMP_MAIL, E.EMP_LOGIN_FLAG
+		    , E.EMP_PROFILE_IMG, E.EMP_TELNO, E.EMP_SIGN_IMG
+		    , E.EMP_CRTFC_NO, E.EMP_QR, E.EMP_EXTENSION, E.EMP_POSITION
+		    , E.EMP_EMAIL_SECOND, E.EMP_SUPRR
+		    , D.DEPT_CD, D.DEPT_NAME, D.U_DEPT_CD
+		    , C.COMMON_CODE_SJ
+		FROM
+		    EMPLOYEE E LEFT OUTER JOIN DEPT D ON (E.DEPT_CD = D.DEPT_CD) LEFT OUTER JOIN COMMON_CODE C ON (E.EMP_RANK = C.COMMON_CODE_CD)
+		WHERE
+		    E.EMP_CD = #{empCd}
+	</select>
+	
+	<!-- 직원 등록-->
+	<insert id="insertEmp" parameterType="EmployeeVO">
+		INSERT INTO EMPLOYEE
+	(
+		EMP_CD
+		, EMP_PW
+		, EMP_NAME
+		, EMP_ZIP
+		, EMP_ADRES
+		, EMP_ADRES_DETAIL
+		, EMP_BIRTH
+		, EMP_SSN
+		, EMP_RANK
+		, EMP_HIREDATE
+		, DEPT_CD
+		, EMP_MAIL
+		, EMP_LOGIN_FLAG
+		, EMP_TELNO
+		, EMP_CRTFC_NO
+		, EMP_QR
+		, EMP_EXTENSION
+		, EMP_POSITION
+		, EMP_EMAIL_SECOND
+		, EMP_SUPRR
+		, EMP_SIGN_IMG
+		, EMP_PROFILE_IMG
+	)
+	VALUES(
+		ZBF_DT_GET_EMPCD(#{empHiredate})
+		, #{empPw}
+		, #{empName}
+		, #{empZip}
+		, #{empAdres}
+		, #{empAdresDetail}
+		, #{empBirth}
+		, #{empSsn}
+		, #{empRank}
+		, #{empHiredate}
+		, #{deptCd}
+		, #{empMail}
+		, 'N'
+		, #{empTelno}
+		, #{empCrtfcNo}
+		, #{empQr}
+		, #{empExtension}
+		, #{empPosition}
+		, #{empEmailSecond}
+		, #{empSuprr}
+		, #{empSignImg}
+		, #{empProfileImg}
+	)
+	</insert>	
+	
+	
+
+	<!-- POI이용한 직원 등록-->	
+	<insert id="insertEmpExcel" parameterType="EmployeeVO">
+		INSERT INTO EMPLOYEE
+		(
+			EMP_CD
+			, EMP_PW
+			, EMP_NAME
+			, EMP_ZIP
+			, EMP_ADRES
+			, EMP_ADRES_DETAIL
+			, EMP_BIRTH
+			, EMP_SSN
+			, EMP_RANK
+			, EMP_HIREDATE
+			, DEPT_CD
+			, EMP_MAIL
+			, EMP_LOGIN_FLAG
+			, EMP_TELNO
+			, EMP_CRTFC_NO
+			, EMP_QR
+			, EMP_EXTENSION
+			, EMP_POSITION
+			, EMP_EMAIL_SECOND
+			, EMP_SUPRR
+			, EMP_SIGN_IMG
+			, EMP_PROFILE_IMG
+		)
+		VALUES(
+			ZBF_DT_GET_EMPCD(#{empHiredate})
+			, #{empPw}
+			, #{empName}
+			, #{empZip}
+			, #{empAdres}
+			, #{empAdresDetail}
+			, #{empBirth}
+			, #{empSsn}
+			, (
+				SELECT COMMON_CODE_CD
+				FROM COMMON_CODE
+				WHERE COMMON_CODE_SJ = #{common.commonCodeSj}
+			)
+			, #{empHiredate}
+			, (
+				SELECT DEPT_CD
+				FROM DEPT
+				WHERE DEPT_NAME=#{dept.deptName}
+			)
+			, #{empMail}
+			, 'N'
+			, #{empTelno}
+			, #{empCrtfcNo}
+			, #{empQr}
+			, #{empExtension}
+			, #{empPosition}
+			, #{empEmailSecond}
+			, 
+			(
+				SELECT E.EMP_CD
+				FROM EMPLOYEE E
+				INNER JOIN DEPT D
+				ON D.DEPT_CD = E.DEPT_CD
+				AND E.EMP_POSITION = '팀장'
+				WHERE D.DEPT_CD = (
+					SELECT DEPT_CD
+					FROM DEPT
+					WHERE DEPT_NAME=#{dept.deptName}
+				)	
+			)
+			, #{empSignImg}
+			, #{empProfileImg}
+		)
+	</insert>
+	
+
+</mapper>
+

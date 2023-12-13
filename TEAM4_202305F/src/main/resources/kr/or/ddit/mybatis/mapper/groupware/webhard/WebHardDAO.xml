@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.groupware.webhard.dao.WebHardDAO">
+
+	<resultMap type="WebHardVO" id="webMap" autoMapping="true">
+		<id property="webSnm" column="WEB_SNM"/>
+		<id property="webCours" column="WEB_COURS"/>
+		<association property="fileAuthor" autoMapping="true"/>
+	</resultMap>
+
+	<select id="selectListFile" resultMap="webMap" parameterType="WebHardVO">
+		SELECT W.WEB_SNM
+			, W.WEB_COURS
+			, W.WEB_TY
+			, W.WEB_RNM
+			, W.WEB_MAKER
+			, FA.FA_TY
+			, FA.FA_NM
+		FROM WEBHARD W
+			LEFT OUTER JOIN FILE_AUTHOR FA
+				ON W.WEB_SNM =FA.WEB_SNM
+				AND W.WEB_COURS =FA.WEB_COURS
+		WHERE W.WEB_COURS=#{webCours}
+			<if test='who eq "c"'>
+				AND FA.FA_NM = #{fileAuthor.faNm}
+			</if>
+			<if test='who eq "d"'>
+				AND FA.FA_NM = FN_GET_DEPT_NAME(#{fileAuthor.faNm})
+			</if>
+		ORDER BY W.WEB_TY DESC,W.WEB_RNM
+	</select>
+
+	<select id="selectFile" resultMap="webMap" parameterType="WebHardVO">
+		SELECT W.WEB_TY
+			, W.WEB_RNM
+			, GET_EMP_NAME(W.WEB_MAKER) WEB_MAKER
+			, W.WEB_DATE
+			, FA.FA_TY
+			<if test='who eq "c"'>
+			, GET_EMP_NAME(FA.FA_NM) FA_NM
+			</if>
+			<if test='who eq "d"'>
+			, FA.FA_NM
+			</if>
+		FROM WEBHARD W
+			LEFT OUTER JOIN FILE_AUTHOR FA
+				ON W.WEB_SNM =FA.WEB_SNM
+				AND W.WEB_COURS =FA.WEB_COURS
+		WHERE W.WEB_COURS=#{webCours}
+			AND W.WEB_SNM=#{webSnm}
+	</select>
+	
+	<insert id="insertFile" parameterType="WebHardVO">
+		<selectKey resultType="int" order="BEFORE" keyProperty="webSnm">
+			SELECT WEBHARD_SEQ.nextval
+			FROM DUAL
+		</selectKey>
+			INSERT INTO WEBHARD(WEB_SNM, WEB_COURS, WEB_TY, WEB_RNM,WEB_MAKER, WEB_DATE)
+			VALUES(
+				#{webSnm}
+				, #{webCours}
+				<if test="webTy eq null">
+				, null
+				</if>
+				<if test="webTy neq null">
+				, #{webTy}
+				</if>
+				, #{webRnm}
+				, #{webMaker}
+				, #{webDate})
+	</insert>
+
+	<insert id="insertAuthor" parameterType="WebHardVO">
+		INSERT INTO FILE_AUTHOR(FA_TY, WEB_SNM, WEB_COURS, FA_NM)
+		VALUES(
+			'rwc'
+			, #{webSnm}
+			, #{webCours},
+			<if test='who eq "c"'>
+				#{webMaker}
+			</if>
+			<if test='who eq "d"'>
+				FN_GET_DEPT_NAME(#{webMaker})
+			</if>
+			)
+	</insert>
+	
+	<delete id="deleteFile" parameterType="WebHardVO">
+		DELETE FROM WEBHARD
+		WHERE WEB_COURS=#{webCours} AND WEB_SNM=#{webSnm}
+	</delete>
+	
+	<delete id="dbDeleteAuthor" parameterType="WebHardVO">
+		DELETE FROM FILE_AUTHOR
+		WHERE WEB_COURS=#{webCours} AND WEB_SNM=#{webSnm}
+	</delete>
+
+	<update id="update" parameterType="WebHardVO">
+		UPDATE WEBHARD
+		SET WEB_RNM=#{webRnm}
+		where WEB_COURS=#{webCours} AND WEB_SNM=#{webSnm}
+	</update>
+</mapper>

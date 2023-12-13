@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.pms.gantt.dao.GanttDAO">
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  Nov 10, 2023}     송석원     최초작성               --> 
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+ 
+	<resultMap type="PjobVO" id="pjobMap" autoMapping="true">
+		<id property="jobSn" column="JOB_SN"/> 
+		
+		<collection property="chargerList"  ofType="ChargerVO" autoMapping="true">
+			<association property="emp" javaType="EmployeeVO" autoMapping="true"></association>
+			</collection>     
+	</resultMap>  
+	
+	<select id="selectPjobList" parameterType="PjobVO"  resultMap="pjobMap" >
+ 
+			
+<!-- 			SELECT  -->
+<!--     P.JOB_SN, -->
+<!--     P.PRO_SN, -->
+<!--     P.JOBU_SN, -->
+<!--     P.JOB_SJ, -->
+<!--     P.JOB_WRITER, -->
+<!--     TO_CHAR(P.JOB_RDATE, 'YYYY-MM-DD') AS JOB_RDATE, -->
+<!--     P.JOB_STCD, -->
+<!--     P.JOB_PRIORT, -->
+<!--     TO_CHAR(TO_DATE(P.JOB_BDATE, 'YYYYMMDD'), 'YYYY-MM-DD') AS JOB_BDATE, -->
+<!--     TO_CHAR(TO_DATE(P.JOB_EDATE, 'YYYYMMDD'), 'YYYY-MM-DD') AS JOB_EDATE, -->
+<!--     P.JOB_CDATE, -->
+<!--     P.JOB_CN,   -->
+<!--     P.PRO_FILE_CD, -->
+<!--     P.JOB_PROGRS, -->
+<!--     P.JOB_SCOPE -->
+<!-- FROM -->
+<!--     PJOB P -->
+<!-- WHERE  -->
+<!--     P.PRO_SN =  #{proSn}  -->
+<!-- START WITH -->
+<!--     P.JOBU_SN IS NULL  -->
+<!-- CONNECT BY PRIOR P.JOB_SN = P.JOBU_SN -->
+<!-- ORDER SIBLINGS BY P.JOB_SN  -->
+			
+<!-- 			SELECT  -->
+<!--     P.JOB_SN, -->
+<!--     P.PRO_SN, -->
+<!--     P.JOBU_SN, -->
+<!--     P.JOB_SJ, -->
+<!--     P.JOB_WRITER, -->
+<!--     TO_CHAR(P.JOB_RDATE, 'YYYY-MM-DD') AS JOB_RDATE, -->
+<!--     P.JOB_STCD, -->
+<!--     P.JOB_PRIORT, -->
+<!--     TO_CHAR(TO_DATE(P.JOB_BDATE, 'YYYYMMDD'), 'YYYY-MM-DD') AS JOB_BDATE, -->
+<!--     TO_CHAR(TO_DATE(P.JOB_EDATE, 'YYYYMMDD'), 'YYYY-MM-DD') AS JOB_EDATE, -->
+<!--     P.JOB_CDATE, -->
+     
+<!--     P.PRO_FILE_CD, -->
+<!--     P.JOB_PROGRS, -->
+<!--     P.JOB_SCOPE -->
+<!-- FROM -->
+<!--     PJOB P -->
+<!-- WHERE  -->
+<!--     P.PRO_SN =  #{proSn}  -->
+<!-- START WITH -->
+<!--     P.JOBU_SN IS NULL  -->
+<!-- CONNECT BY PRIOR P.JOB_SN = P.JOBU_SN -->
+<!-- ORDER SIBLINGS BY P.JOB_SN  -->
+
+
+	       SELECT 
+	        P.JOB_SN,
+	        P.PRO_SN,
+	        P.JOBU_SN,
+	        CASE
+	            WHEN LEVEL > 1 THEN '　　' || P.JOB_SJ     
+	            ELSE P.JOB_SJ
+	        END AS JOB_SJ,
+	        P.JOB_WRITER,
+	        TO_CHAR(P.JOB_RDATE, 'YYYY-MM-DD') AS JOB_RDATE,
+	        P.JOB_STCD,
+	        P.JOB_PRIORT,
+	        TO_CHAR(TO_DATE(P.JOB_BDATE, 'YYYYMMDD'), 'YYYY-MM-DD') AS JOB_BDATE,
+	        TO_CHAR(TO_DATE(P.JOB_EDATE, 'YYYYMMDD'), 'YYYY-MM-DD') AS JOB_EDATE,
+	        P.JOB_CDATE,
+	        P.PRO_FILE_CD,
+	        P.JOB_PROGRS,
+	        P.JOB_SCOPE
+	    FROM
+	        PJOB P
+	    WHERE 
+	        P.PRO_SN =  #{proSn} 
+	    START WITH
+	        P.JOBU_SN IS NULL 
+	    CONNECT BY PRIOR P.JOB_SN = P.JOBU_SN
+	    ORDER SIBLINGS BY P.JOB_SN
+		
+	 
+	</select>
+	
+	<select id="selectGanttchoice"  parameterType="PjobVO"  resultMap="pjobMap" > 
+		SELECT *
+			FROM PJOB J
+			LEFT OUTER JOIN (
+			   SELECT 
+			      E.EMP_NAME
+			      , C.EMP_CD
+			      , C.JOB_SN 
+			   FROM CHARGER C
+			   LEFT OUTER JOIN EMPLOYEE E
+			   ON C.EMP_CD = E.EMP_CD
+			)A 
+			ON A.JOB_SN = J.JOB_SN
+			WHERE J.PRO_SN = #{proSn}
+			<if test="jobuSn == null">
+        		AND J.JOB_SN = #{jobSn} 
+    		</if>
+    		<if test="jobuSn != null">
+        		AND J.JOBU_SN = #{jobuSn}
+        		AND J.JOB_SN = #{jobSn} 
+    		</if> 
+	
+	
+	</select>
+
+
+</mapper>

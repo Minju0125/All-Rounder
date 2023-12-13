@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 23.     박민주     최초작성               -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+<mapper namespace="kr.or.ddit.admin.reservation.vehicle.dao.AdVehicleDAO">
+		
+	<resultMap type="VehicleVO" id="vehicleMap" autoMapping="true">
+		<id property="vhcleCd" column="VHCLE_CD"/>
+		<collection property="vhcleReserveList" ofType="VehicleReservationVO" autoMapping="true">
+			<id property="vhcleReserveCd" column="VHCLE_RESERVE_CD"/>
+			<result property="vhcleReserveEmpNm" column="VHCLE_RESERVE_EMP_NM"/>
+			<result property="vhcleReserveEmpRankNm" column="VHCLE_RESERVE_EMP_RANK_NM"/>
+			<result property="vhcleReserveEmpDeptNm" column="VHCLE_RESERVE_EMP_DEPT_NM"/>
+		</collection>
+	</resultMap>
+	
+	<!-- 차량 목록을 조회하는 쿼리 -->
+	
+	<select id="selectVehicleList" resultType="VehicleVO">
+		SELECT 
+			VHCLE_CD
+			,VHCLE_NO
+			,VHCLE_CAPACITY
+			,VHCLE_IMG
+			,VHCLE_MODEL
+			,VHCLE_REGIST_DATE
+			,VHCLE_FLAG  
+		FROM
+			VEHICLE
+	</select>
+	
+	<!-- 특정 차량 정보 조회 -->
+	<select id="selectVehicle" parameterType="String" resultType="VehicleVO">
+		SELECT 
+			VHCLE_CD
+			,VHCLE_NO
+			,VHCLE_CAPACITY
+			,VHCLE_IMG
+			,VHCLE_MODEL
+			,VHCLE_REGIST_DATE
+			,VHCLE_FLAG  
+		FROM
+			VEHICLE
+		WHERE 
+			VHCLE_CD =#{vehicleCd}
+	</select>
+	
+	<!-- 신규 차량을 등록하는 쿼리 -->
+	<insert id="insertVehicle" parameterType="VehicleVO">
+		<selectKey keyProperty="vhcleCd" order="BEFORE" resultType="String">
+			SELECT 
+			    TO_CHAR(SYSDATE,'YYMMDD')||'V'||LPAD(VEHICLE_SEQ.NEXTVAL,3,0) AS VHCLE_CD
+			FROM DUAL
+		</selectKey>
+		  INSERT INTO vehicle (
+			    vhcle_cd,
+			    vhcle_no,
+			    vhcle_capacity,
+			    vhcle_img,
+			    vhcle_model,
+			    vhcle_regist_date,
+			    vhcle_flag
+			) VALUES (
+				   #{vhcleCd,jdbcType=VARCHAR}
+				, #{vhcleNo,jdbcType=VARCHAR}
+				, #{vhcleCapacity,jdbcType=VARCHAR}
+				, #{vhcleImg,jdbcType=VARCHAR}
+				, #{vhcleModel,jdbcType=VARCHAR}
+				, TO_CHAR(SYSDATE,'YYYY-MM-DD')
+				, '0'
+			)
+	</insert>
+	
+	<!-- 특정 차량의 상세 정보를 수정하는 쿼리 -->
+	<!-- 대상 항목 : 차량번호, 차량수용인원, 차량이미지url, 차량모델명, 차량등록일자, 차량예약상태 -->
+	<update id="updateVehicle" parameterType="VehicleVO">
+		UPDATE VEHICLE
+		SET
+		    vhcle_no=#{vhcleNo,jdbcType=VARCHAR}
+		    , vhcle_capacity=#{vhcleCapacity,jdbcType=VARCHAR}
+		    , vhcle_img=#{vhcleImg,jdbcType=VARCHAR}
+		    , vhcle_model=#{vhcleModel,jdbcType=VARCHAR}
+		 	, vhcle_regist_date=#{vhcleRegistDate,jdbcType=VARCHAR}
+		    , vhcle_flag=#{vhcleFlag,jdbcType=VARCHAR}
+		WHERE
+		    vhcle_cd = #{vhcleCd,jdbcType=VARCHAR}
+	</update>
+	
+	<delete id="deleteVehicle" parameterType="String">
+		DELETE 
+			FROM VEHICLE
+		WHERE
+        	VHCLE_CD = #{vhcleCd}
+	</delete>
+	
+	<!-- 모든 차량의 모든 예약 내역을 조회하는 쿼리 -->
+	<!-- 차량에 대한 예약 내역이 존재한다면, 예약내역과 예약자 정보를 가져온다. -->
+	<!-- 차량에 대한 예약 내역이 존재하지 않는다면, 나머지 컬럼은 null로 표시된다. -->
+	<select id="selectVehicleReservationList" resultMap="vehicleMap">
+		SELECT 
+		    V.VHCLE_CD
+		    ,V.VHCLE_NO
+		    , V.VHCLE_CAPACITY
+		    , V.VHCLE_IMG
+		    , V.VHCLE_MODEL
+		    , V.VHCLE_REGIST_DATE
+		    , V.VHCLE_FLAG
+		    , R.VHCLE_RESERVE_CD
+		    , R.VHCLE_RESERVE_EMP_CD
+		    , FN_GET_EMP_NAME(R.VHCLE_RESERVE_EMP_CD) VHCLE_RESERVE_EMP_NM 			/* 예약자명 */
+		    , FN_GET_EMP_RANK_NM(R.VHCLE_RESERVE_EMP_CD) VHCLE_RESERVE_EMP_RANK_NM	/* 예약자 직급명*/
+		    , FN_GET_DEPT_NAME(R.VHCLE_RESERVE_EMP_CD) VHCLE_RESERVE_EMP_DEPT_NM 	/* 예약자 부서명*/
+		    , R.VHCLE_RESERVE_PW
+		    , R.VHCLE_RESERVE_PUR
+		    , R.VHCLE_TIME_CD
+		    , R.VHCLE_TIME_DATE
+		FROM
+		    VEHICLE V
+		    LEFT OUTER JOIN VHCLE_RESERVATION R ON V.VHCLE_CD = R.VHCLE_CD
+		    LEFT OUTER JOIN EMPLOYEE E ON R.VHCLE_RESERVE_EMP_CD = E.EMP_CD
+			LEFT OUTER JOIN COMMON_CODE C ON E.EMP_RANK=C.COMMON_CODE_CD
+			LEFT OUTER JOIN DEPT D ON E.DEPT_CD=D.DEPT_CD
+	</select>
+	
+	<select id="selectNextConfroomCode" parameterType="String" resultType="String">
+		SELECT 
+		    '${selectedStair}'||LPAD(MAX(TO_NUMBER(SUBSTR(CONF_ROOM_CD,2,4)))+1,3,0)
+		FROM 
+		    CONF_ROOM
+		WHERE SUBSTR(CONF_ROOM_CD,0,1) =#{selectedStair}
+	</select>
+</mapper>

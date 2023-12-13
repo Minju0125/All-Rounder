@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        	수정자     수정내용               -->
+<!--  ==========   		======    ==============        -->
+<!--  2023. 12. 5.      김보영     올해 입퇴사자수      -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+<mapper
+	namespace="kr.or.ddit.admin.analysis.dao.AnalysisDAO">
+	
+	<resultMap type="EmployeeVO" id="empMap" autoMapping="true">
+		<id property="empCd" column="EMP_CD"	/> 
+	<association property="dept" javaType="DeptVO" autoMapping="true">
+		<id property="deptCd" column="DEPT_CD" />
+	</association>
+	<association property="common" javaType="CommonVO" autoMapping="true">
+	</association> 
+	</resultMap>
+	
+	<!-- 부서별 일 평균 근무시간 -->
+	<select id="selectWorkTime"  resultType="ChartVO"> 
+		SELECT 
+			D.DEPT_NAME AS deftName
+		<![CDATA[
+			,(TRUNC(AVG(CASE WHEN (END_TIME-START_TIME) < 0 THEN (END_TIME-START_TIME+240000) ELSE (END_TIME-START_TIME) END))-10000)/10000 AS workTime
+		 ]]>
+		FROM ATTENDANCE A 
+		LEFT OUTER JOIN EMPLOYEE E 
+		ON A.EMP_CD=E.EMP_CD
+		LEFT OUTER JOIN DEPT D 
+		ON E.DEPT_CD = D.DEPT_CD
+		WHERE D.DEPT_NAME NOT IN ('대표이사','본부장','관리자')
+		GROUP BY D.DEPT_NAME
+	</select>
+	
+	
+	<!-- 올해 입사자 -->
+	<select id="selectHireCnt" parameterType="EmployeeVO" resultType="ChartVO">
+		<![CDATA[
+		WITH AllMonths AS (
+		  SELECT LEVEL AS thisMonth
+		  FROM dual
+		  CONNECT BY LEVEL <= 12
+		)
+		SELECT m.thisMonth, NVL(COUNT(e.EMP_HIREDATE), 0) AS hireCnt
+		FROM AllMonths m
+		LEFT JOIN EMPLOYEE e 
+		ON EXTRACT(MONTH FROM TO_DATE(e.EMP_HIREDATE, 'YYYYMMDD')) = m.thisMonth
+		AND e.EMP_LOGIN_FLAG IN ('N', 'E')
+		GROUP BY m.thisMonth
+		ORDER BY m.thisMonth
+		 ]]>
+	</select>
+	
+	<!-- 올해 퇴사자 -->
+	<select id="selectLeaveCnt" parameterType="EmployeeVO" resultType="ChartVO">
+		<![CDATA[
+		WITH AllMonths AS (
+		  SELECT LEVEL AS thisMonth
+		  FROM dual
+		  CONNECT BY LEVEL <= 12
+		)
+		SELECT m.thisMonth, NVL(COUNT(e.EMP_LEAVEDATE), 0) AS leaveCnt
+		FROM AllMonths m
+		LEFT JOIN EMPLOYEE e 
+		ON EXTRACT(MONTH FROM e.EMP_LEAVEDATE) = m.thisMonth
+		AND e.EMP_LOGIN_FLAG = 'L'
+		GROUP BY m.thisMonth
+		ORDER BY m.thisMonth
+		 ]]>
+	</select>
+	
+	
+<!-- 	부서별 인원 -->
+	<select id="emphavedept" resultMap="empMap" parameterType="EmployeeVO"> 
+	SELECT
+	    D.DEPT_NAME,
+	    COUNT(*) AS DEPT_COUNT
+	FROM
+	    EMPLOYEE E
+	JOIN
+	    DEPT D ON D.DEPT_CD = E.DEPT_CD
+	WHERE
+	    E.EMP_LOGIN_FLAG NOT IN ('L', 'Y')
+	AND E.DEPT_CD NOT IN ('DEPT_01','DEPT_010')
+	GROUP BY
+	    D.DEPT_NAME
+	</select> 
+	
+<!-- 	직급별 인원 -->
+	<select id="emphaverank" resultMap="empMap" parameterType="EmployeeVO">  
+		SELECT
+		    C.COMMON_CODE_SJ,
+		    COUNT(*) AS RANK_COUNT
+		FROM 
+		    employee E 
+		JOIN
+		    COMMON_CODE C ON C.COMMON_CODE_CD = E.EMP_RANK
+		WHERE
+		    E.EMP_LOGIN_FLAG NOT IN ('L', 'Y') 
+		GROUP BY
+		    C.COMMON_CODE_SJ, E.EMP_RANK
+		ORDER BY
+		    E.EMP_RANK DESC
+	</select>
+	
+	
+</mapper>

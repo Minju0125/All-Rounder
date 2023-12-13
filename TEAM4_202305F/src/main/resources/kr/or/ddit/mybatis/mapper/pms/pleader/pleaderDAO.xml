@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.pms.pleader.dao.PleaderDAO">
+
+<resultMap type="PjobVO" id="pjobMap" autoMapping="true">
+		<id property="jobSn" column="JOB_SN"/>
+	<association property="proj" javaType="ProjectVO" autoMapping="true"> 
+		<id property="proSn" column="PRO_SN"/>
+	</association>	
+	<collection property="chargerList"   ofType="ChargerVO" autoMapping="true">
+		<id property="empCd" column="EMP_CD"/> 
+		<association property="emp" javaType="EmployeeVO" autoMapping="true">
+			<id property="empCd" column="EMP_CD"/>   
+		</association> 
+	</collection>
+</resultMap> 
+
+
+
+<!-- 일감 전체 카운트-->
+ <select id="pjobAllCount" parameterType="String"  resultMap="pjobMap">     
+ SELECT 
+    PJ.PRO_NM,
+    SUM(CASE WHEN JOB_STCD = '1' THEN 1 ELSE 0 END) AS AA_CNT,
+    SUM(CASE WHEN JOB_STCD = '2' THEN 1 ELSE 0 END) AS BB_CNT,
+    SUM(CASE WHEN JOB_STCD = '3' THEN 1 ELSE 0 END) AS CC_CNT,
+    SUM(CASE WHEN JOB_STCD = '4' THEN 1 ELSE 0 END) AS DD_CNT,
+    SUM(CASE WHEN JOB_STCD = '5' THEN 1 ELSE 0 END) AS EE_CNT, 
+    COUNT(*) AS TOTAL_COUNT 
+FROM
+    PJOB P
+JOIN
+    PROJECT PJ ON PJ.PRO_SN = P.PRO_SN
+WHERE
+    P.PRO_SN= #{proSn}
+GROUP BY
+    PJ.PRO_NM 
+ 
+ </select>
+
+
+<select id="pjobChargerCount" resultMap="pjobMap" parameterType="String">  
+   
+	       SELECT
+				E.EMP_NAME,
+		        SUM(CASE WHEN P.JOB_STCD = '1' THEN 1 ELSE 0 END) AS AA_CNT,
+		        SUM(CASE WHEN P.JOB_STCD = '2' THEN 1 ELSE 0 END) AS BB_CNT,
+		        SUM(CASE WHEN P.JOB_STCD = '3' THEN 1 ELSE 0 END) AS CC_CNT,
+		        SUM(CASE WHEN P.JOB_STCD = '4' THEN 1 ELSE 0 END) AS DD_CNT,
+		        SUM(CASE WHEN P.JOB_STCD = '5' THEN 1 ELSE 0 END) AS EE_CNT,
+		        COUNT(*) AS TOTAL_COUNT  
+	    FROM
+	        PJOB P 
+	    JOIN
+	        CHARGER C ON P.JOB_SN = C.JOB_SN
+	    JOIN
+	        EMPLOYEE E ON E.EMP_CD = C.EMP_CD
+	    WHERE
+	        C.PRO_SN = #{proSn}
+	        AND P.JOB_STCD IS NOT NULL
+	        AND P.JOB_SN = (SELECT MAX(P.JOB_SN) FROM PJOB WHERE C.EMP_CD = E.EMP_CD)
+	    GROUP BY
+	        E.EMP_NAME  
+</select>
+
+
+
+<select id="selectTotalRecord" parameterType="PaginationInfo" resultType="int">
+	SELECT COUNT(*)
+	FROM 
+			PJOB J
+        JOIN 
+            CHARGER C ON C.JOB_SN = J.JOB_SN 
+        JOIN 
+            EMPLOYEE E ON E.EMP_CD = C.EMP_CD
+			AND C.PRO_SN = J.PRO_SN
+		WHERE C.EMP_CD =  #{detailCondition.empCd1}
+		 	AND C.PRO_SN= #{detailCondition.proSn}
+		 	<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+					AND	INSTR(J.JOB_SJ, #{simpleCondition.searchWord}) > 0   
+			</if> 
+</select>  
+
+<select id="selectLeaderPmember" parameterType="PaginationInfo" resultMap="pjobMap">
+SELECT BOARDVIEW1.* 
+	FROM ( SELECT A.*, ROWNUM RNUM
+	    FROM(
+	        SELECT
+	            E.EMP_NAME
+	            ,E.EMP_PROFILE_IMG 
+				,J.JOB_SN
+			    , J.PRO_SN
+			    , J.JOBU_SN
+			    , J.JOB_SJ
+			    , J.JOB_RDATE
+			    , J.JOB_STCD
+			    , J.JOB_PRIORT
+			    , TO_CHAR(TO_DATE(J.JOB_BDATE),'YYYY-MM-DD') AS JOB_BDATE
+	    		, TO_CHAR(TO_DATE(J.JOB_EDATE),'YYYY-MM-DD') AS JOB_EDATE
+			    , TO_CHAR(TO_DATE(J.JOB_CDATE),'YYYY-MM-DD') AS JOB_CDATE
+			    , J.JOB_PROGRS  
+			    , J.JOB_SCOPE
+			FROM 
+				PJOB J
+	        JOIN 
+	            CHARGER C ON C.JOB_SN = J.JOB_SN 
+	        JOIN 
+	            EMPLOYEE E ON E.EMP_CD = C.EMP_CD
+				AND C.PRO_SN = J.PRO_SN
+			WHERE C.EMP_CD =  #{detailCondition.empCd1} 
+			 	AND C.PRO_SN= #{detailCondition.proSn} 
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+					AND	INSTR(J.JOB_SJ, #{simpleCondition.searchWord}) > 0
+				</if>	 	
+		ORDER BY JOB_EDATE DESC -- 최근 등록일자 기준으로 정렬 
+		    ) A)  BOARDVIEW1
+		<![CDATA[ 
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]> 	 	 
+</select>
+
+  
+</mapper>

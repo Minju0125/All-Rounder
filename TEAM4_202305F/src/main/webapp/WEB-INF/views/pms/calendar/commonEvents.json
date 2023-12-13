@@ -1,0 +1,34 @@
+{
+  "id": "common001",
+  "title": "추석",
+  "start": "2023-09-28",
+  "end":"2023-10-01",
+  "allDay": true,
+  "backgroundColor":"black",
+  "textColor":"pink",
+  "extendedProps": {
+      "comment": "명절"
+  }
+},
+{
+  "id": "common002",
+  "title": "임시휴일",
+  "start": "2023-10-02",
+  "allDay": true,
+  "backgroundColor":"black",
+  "textColor":"pink",
+  "extendedProps": {
+      "comment": "징검다리"
+  }
+},
+{
+  "id": "common003",
+  "title": "개천절",
+  "start": "2023-10-03",
+  "allDay": true,
+  "backgroundColor":"black",
+  "textColor":"pink",
+  "extendedProps": {
+      "comment": "국가휴일"
+  }
+}

@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:sec="http://www.springframework.org/schema/security"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-5.8.xsd">
+ 
+	
+	<bean id="customAuthenticationFailureHandler" class="kr.or.ddit.security.CustomAuthenticationFailureHandler" />
+	
+	<bean id="passwordEncoder" class="org.springframework.security.crypto.factory.PasswordEncoderFactories" 
+		factory-method="createDelegatingPasswordEncoder"
+	/>
+ 
+ 	<sec:authentication-manager id="authenticationManager">
+ 		<sec:authentication-provider user-service-ref="loginDAO">
+ 			<sec:password-encoder ref="passwordEncoder"/>
+ 		</sec:authentication-provider>
+ 	</sec:authentication-manager>
+ 	
+ 	<!-- authentication-failure-forward-url="/index.do" -->
+ 	<sec:http auto-config="true">
+		<sec:form-login
+			login-page="/login"
+			login-processing-url="/login"
+			username-parameter="empCd"
+			password-parameter="empPw"
+			authentication-success-handler-ref="customAuthenticationSuccessHandler"
+			authentication-failure-handler-ref="customAuthenticationFailureHandler"	
+		/>
+		
+		<sec:logout
+			logout-url="/logout"
+			logout-success-url="/login"
+		/>
+	 
+		<sec:intercept-url pattern="/login" method="GET" access="permitAll"/>
+		<sec:intercept-url pattern="/findPw/**" method="POST" access="permitAll"/>
+		<sec:intercept-url pattern="/findPw/**" method="GET" access="permitAll"/>
+		<sec:intercept-url pattern="/findPw/**" method="PUT" access="permitAll"/>
+		<sec:intercept-url pattern="/index.do" method="GET" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/logout" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/notice/**" method="GET" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/notice/**" method="POST" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/notice/**" method="PUT" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/notice/**" method="DELETE" access="hasRole('ADMIN')"/>
+		
+		<sec:intercept-url pattern="/faq/**" method="GET" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/faq/**" method="POST" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/faq/**" method="PUT" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/faq/**" method="DELETE" access="hasRole('ADMIN')"/>
+		
+		<sec:intercept-url pattern="/event/**" method="GET" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/event/**" method="POST" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/event/**" method="PUT" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/event/**" method="DELETE" access="hasRole('ADMIN')"/>
+		
+		<sec:intercept-url pattern="/mail/**" method="GET" access="hasRole('USER')"/>
+		<sec:intercept-url pattern="/mail/**" method="POST" access="hasRole('USER')"/>
+		<sec:intercept-url pattern="/mail/**" method="PUT" access="hasRole('USER')"/>
+		<sec:intercept-url pattern="/mail/**" method="DELETE" access="hasRole('USER')"/>
+		
+		<sec:intercept-url pattern="/analysis/**" method="GET" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/analysis/**" method="POST" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/analysis/**" method="PUT" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/analysis/**" method="DELETE" access="hasRole('ADMIN')"/>
+		
+		<sec:intercept-url pattern="/pleader/**" method="GET" access="hasRole('USER')"/>
+		<sec:intercept-url pattern="/pleader/**" method="POST" access="hasRole('USER')"/>
+		<sec:intercept-url pattern="/pleader/**" method="PUT" access="hasRole('USER')"/>
+		<sec:intercept-url pattern="/pleader/**" method="DELETE" access="hasRole('USER')"/>
+		 
+		<sec:intercept-url pattern="/attendance" method="GET" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/attendance" method="POST" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/attendance" method="PUT" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/attendance" method="DELETE" access="hasAnyRole('USER','ADMIN')"/>
+		
+		<sec:intercept-url pattern="/adminAttendance" method="GET" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/adminAttendance" method="POST" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/adminAttendance" method="PUT" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/adminAttendance" method="DELETE" access="hasAnyRole('USER','ADMIN')"/>
+		
+		<sec:intercept-url pattern="/job/**" method="GET" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/job/**" method="POST" access="hasRole('USER')"/>
+		<sec:intercept-url pattern="/job/**" method="PUT" access="hasRole('USER')"/>
+		<sec:intercept-url pattern="/job/**" method="DELETE" access="hasRole('USER')"/>
+		
+		<sec:intercept-url pattern="/issue/**" method="GET" access="hasRole('USER')"/>
+		<sec:intercept-url pattern="/issue/**" method="POST" access="hasRole('USER')"/>
+		<sec:intercept-url pattern="/issue/**" method="PUT" access="hasRole('USER')"/>
+		<sec:intercept-url pattern="/issue/**" method="DELETE" access="hasRole('USER')"/>
+		
+		<sec:intercept-url pattern="/web" method="GET" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/web" method="POST" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/web" method="PUT" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/web" method="DELETE" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/web/**" method="GET" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/web/**" method="POST" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/web/**" method="PUT" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/web/**" method="DELETE" access="hasAnyRole('USER','ADMIN')"/>
+		
+		<sec:intercept-url pattern="/account/**" method="GET" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/account/**" method="POST" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/account/**" method="PUT" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/account/**" method="DELETE" access="hasRole('ADMIN')"/>
+		
+		<sec:intercept-url pattern="/adminproject/**" method="GET" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/adminproject/**" method="POST" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/adminproject/**" method="PUT" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/adminproject/**" method="DELETE" access="hasRole('ADMIN')"/>
+		
+		<sec:intercept-url pattern="/vehicle/reserve/**" method="GET" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/vehicle/reserve/**" method="POST" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/vehicle/reserve/**" method="PUT" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/vehicle/reserve/**" method="DELETE" access="hasAnyRole('USER','ADMIN')"/>
+		
+		<sec:intercept-url pattern="/adVehicle/**" method="GET" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/adVehicle/**" method="POST" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/adVehicle/**" method="PUT" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/adVehicle/**" method="DELETE" access="hasRole('ADMIN')"/>
+		
+		<sec:intercept-url pattern="/vehicle/**" method="GET" access="hasAnyRole('USER','ADMIN')"/>
+		<sec:intercept-url pattern="/vehicle/**" method="POST" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/vehicle/**" method="PUT" access="hasRole('ADMIN')"/>
+		<sec:intercept-url pattern="/vehicle/**" method="DELETE" access="hasRole('ADMIN')"/>
+		
+		<sec:intercept-url pattern="/*" access="isAuthenticated()"/> 
+	</sec:http>
+
+</beans>
+
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        	수정자     수정내용               -->
+<!--  ==========   		======    ==============        -->
+<!--  2023. 11. 19.     김보영     job,account 등록           -->
+<!--  2023. 11. 19.     송석원     faq 등록           -->
+<!--  2023. 11. 23.     박민주     vehicle 등록           -->
+<!--  2023. 11. 23.     박민주     /vehicle/adminHome 경로에 대한 설정 추가       -->
+<!--  2023. 11. 25.     김보영     issue 등록       -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->

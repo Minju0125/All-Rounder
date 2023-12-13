@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:websocket="http://www.springframework.org/schema/websocket"
+	xsi:schemaLocation="http://www.springframework.org/schema/websocket http://www.springframework.org/schema/websocket/spring-websocket-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<bean id="websocketHandler" class="kr.or.ddit.alarm.controller.websocketHandler" />
+	<bean id="chatHandler" class="kr.or.ddit.messenger.controller.ChatHandler"/>
+	<websocket:handlers allowed-origins="*">
+		<websocket:mapping handler="websocketHandler" path="/webSocket" />
+		<websocket:mapping handler="chatHandler" path="/chat" />
+		<websocket:handshake-interceptors>
+			<bean class="org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor" />
+		</websocket:handshake-interceptors>	
+	</websocket:handlers>
+	
+</beans>

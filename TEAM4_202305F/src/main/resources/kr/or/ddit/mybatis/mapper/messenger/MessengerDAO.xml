@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 6.     박민주     최초작성               -->
+<!--  2023. 11. 18.     박민주     채팅방 목록 출력 쿼리문 추가   -->
+<!--  2023. 11. 18.     박민주     신규 채팅방 개설 쿼리문 추가   -->
+<!--  2023. 11. 18.     박민주     채팅방 삭제 쿼리문 추가   -->
+<!--  2023. 11. 18.     박민주     채팅방 수정 쿼리문 추가   -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+<mapper namespace="kr.or.ddit.messenger.dao.MessengerDAO">
+
+	<resultMap type="ChatParticipantVO" id="chatParticipantMap" autoMapping="true">
+		<association property="employee" javaType="EmployeeVO" autoMapping="true">
+			<id property="empCd" column="EMP_CD" />
+			<association property="common" autoMapping="true" />
+			<association property="dept" autoMapping="true"/>
+		</association>
+	</resultMap>
+	
+	<select id="selectChatList" parameterType="String" resultMap="chatParticipantMap">
+		SELECT
+					P.CHAT_EMP_CD /* 채팅방 참여자 사번 */
+					,P.CHAT_ROOM_CD /* 채팅방 코드 */
+					,P.CHAT_ROOM_NM /* 채팅방 이름 */
+		            ,E.EMP_NAME /* 채팅방 참여자 이름 */
+		            ,E.EMP_RANK /* 채팅방 참여자 직급코드 */
+		            ,E.DEPT_CD /* 채팅방 참여자 부서코드 */
+		            ,E.EMP_MAIL /* 채팅방 참여자 이메일 */
+		            ,E.EMP_POSITION /* 채팅방 참여자 position(프로젝트) */
+		            ,E.EMP_EMAIL_SECOND /* 채팅방 참여자 second mail */
+		            ,E.EMP_PROFILE_IMG /* 채팅방 참여자 프로필 사진 */
+		            ,C.COMMON_CODE_SJ /* 채팅방 참여자 직급이름 */
+		            ,D.DEPT_NAME /* 채팅방 참여자 부서이름 */
+				FROM
+					CHAT_PARTICIPANT P
+		            	INNER JOIN EMPLOYEE E ON P.CHAT_EMP_CD = E.EMP_CD
+						INNER JOIN COMMON_CODE C ON E.EMP_RANK=C.COMMON_CODE_CD
+						INNER JOIN DEPT D ON E.DEPT_CD=D.DEPT_CD
+				WHERE
+					CHAT_EMP_CD = #{chatEmpCd}
+	</select>
+	
+	<select id="retrieveChatParticipantOne" parameterType="ChatParticipantVO" resultMap="chatParticipantMap">
+		SELECT
+				P.CHAT_EMP_CD
+				,P.CHAT_ROOM_CD
+				,P.CHAT_ROOM_NM
+	            ,E.EMP_NAME
+	            ,E.EMP_RANK
+	            ,E.DEPT_CD
+	            ,E.EMP_MAIL
+	            ,E.EMP_POSITION
+	            ,E.EMP_EMAIL_SECOND
+	            ,C.COMMON_CODE_SJ
+	            ,D.DEPT_NAME
+			FROM
+				CHAT_PARTICIPANT P
+	            	INNER JOIN EMPLOYEE E ON P.CHAT_EMP_CD = E.EMP_CD
+					INNER JOIN COMMON_CODE C ON E.EMP_RANK=C.COMMON_CODE_CD
+					INNER JOIN DEPT D ON E.DEPT_CD=D.DEPT_CD
+			WHERE
+				P.CHAT_ROOM_CD=#{chatRoomCd}
+				AND P.CHAT_EMP_CD=#{chatEmpCd}
+	</select>
+
+	<!-- 신규 채팅방 번호 조회 -->
+	<select id="selectNewChatSeq" resultType="String">
+			SELECT
+			TO_CHAR(SYSDATE,'YYMMDD')||TO_CHAR(CHATROOM_SEQ.NEXTVAL,'FM0000') AS CHAT_ROOM_CD
+			from dual
+	</select>
+	
+	<!-- 신규 프로젝트 채팅방 번호 조회 -->
+	<select id="selectProjectNewChatSeq" resultType="String">
+			SELECT
+			'P'||TO_CHAR(SYSDATE,'YYMMDD')||TO_CHAR(CHATROOM_SEQ.NEXTVAL,'FM0000') AS CHAT_ROOM_CD
+			from dual
+	</select>
+	
+	<!-- 신규 채팅방 개설 시, 채팅방 참여자 테이블에 INSERT -->
+	<insert id="insertChatParticipant" parameterType="ChatParticipantVO">
+		INSERT INTO CHAT_PARTICIPANT (
+			CHAT_EMP_CD
+			,CHAT_ROOM_CD
+			,CHAT_ROOM_NM
+			)
+		VALUES (
+			#{chatEmpCd,jdbcType=VARCHAR}
+			,#{chatRoomCd,jdbcType=VARCHAR}
+			,#{chatRoomNm,jdbcType=VARCHAR}
+					)
+	</insert>
+	
+	<delete id="deleteChatRoom" parameterType="ChatParticipantVO">
+		DELETE 
+			FROM CHAT_PARTICIPANT
+		WHERE
+	        CHAT_EMP_CD = #{chatEmpCd}
+	   	 AND CHAT_ROOM_CD = #{chatRoomCd}
+	</delete>
+	
+	<update id="updateChatRoom" parameterType="ChatParticipantVO">
+		UPDATE CHAT_PARTICIPANT
+		SET
+		    CHAT_ROOM_NM = #{chatRoomNm}
+		WHERE
+		        chat_emp_cd = #{chatEmpCd}
+		    AND chat_room_cd = #{chatRoomCd}
+	</update>
+	
+	<!-- 채팅방별 참여자 조회 쿼리 (11.22 추가) -->
+	<select id="selectChatRoomParties" parameterType="String" resultType="ChatParticipantVO">
+		SELECT 
+			P.CHAT_EMP_CD 
+    		,E.EMP_NAME
+    		,E.EMP_RANK
+			,E.DEPT_CD
+			,E.EMP_MAIL
+			,E.EMP_POSITION
+			,E.EMP_EMAIL_SECOND
+			,E.EMP_PROFILE_IMG
+			,C.COMMON_CODE_SJ
+			,D.DEPT_NAME
+	    FROM
+	    	CHAT_PARTICIPANT P
+	        	INNER JOIN EMPLOYEE 
+	        		E ON P.CHAT_EMP_CD = E.EMP_CD
+				INNER JOIN COMMON_CODE 
+					C ON E.EMP_RANK=C.COMMON_CODE_CD
+				INNER JOIN 
+					DEPT D ON E.DEPT_CD=D.DEPT_CD
+	    WHERE CHAT_ROOM_CD= #{chatRoomCd} 
+	</select>
+	
+</mapper>

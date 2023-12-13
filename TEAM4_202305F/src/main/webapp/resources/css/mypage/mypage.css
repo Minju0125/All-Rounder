@@ -1,0 +1,76 @@
+@charset "UTF-8";
+
+.resized-image {
+    width: 100%;
+    height: 155px;
+}
+#updateClick{
+	width: 70px;
+}
+#qrcode{
+	width: 200px;
+	height: 94px;
+}
+#updateMypage{
+	width: 70px;
+}
+#cancellMypage{
+	width: 70px;
+}
+#searchMypage{
+	width: 70px;
+}
+#bodyArea{
+	width: 100.666667%;
+}
+#areaBody{
+	padding: 0.5rem !important;	
+	width: 78%;
+	height: 100%;
+}
+#leftMypageArea{
+	width: 45%;
+}
+#rightMypageArea{
+	width: 45%;
+	float: inline-end;
+}
+#signArea{
+	float: inline-end;
+	margin-top: -100px;
+}
+#profileArea{
+	width: 165px;
+	position: relative;
+    top: 35px;
+}
+#profileMypage{
+	position: absolute;
+    width: 100%;
+    height: 100%;
+    left: -24px;
+}
+.swal2-container {
+    z-index: 10000 !important; /* 원하는 z-index 값으로 조절하세요 */
+}
+.modal-content.text-center {
+    width: 140%;
+    height: 1020px;
+    scale: 80%;
+    top: -123px;
+    left: -13%;
+}
+#sizeBody{
+	height: 500px;
+}
+#bodySize{
+	height: 500px;
+}
+.fixed_img{
+    position: fixed;
+    right: 58px;
+    bottom: 16px;
+}
+#profile_update_Img{
+	margin-left: 3%;
+}

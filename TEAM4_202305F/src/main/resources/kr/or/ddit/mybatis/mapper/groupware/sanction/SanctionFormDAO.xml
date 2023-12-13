@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 14. 전수진     최초작성               -->
+<!--  2023. 11. 21. 전수진     DB formNo 데이터타입변환으로 인한 수정  -->
+<!--  2023. 12. 08. 전수진     관리자 양식관리 추가  -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+<mapper namespace="kr.or.ddit.groupware.sanction.dao.SanctionFormDAO">
+
+	<!-- 결재양식폼 추가 -->
+	<insert id="insertSanctionForm" parameterType="SanctionFormVO">
+		INSERT INTO SANCTION_FORM (
+			FORM_NO			/* 양식번호 */
+			, FORM_NM		/* 양식명 */
+			, FORM_SOURC	/* 양식html소스 */
+			, FORM_SAMPLE	/* 샘플html소스 */
+			, FORM_USE		/* 양식 사용여부 */
+			, FORM_INFO 	/* 양식설명 */
+		) VALUES (
+			SANCTIONFORM_SEQ.NEXTVAL
+			, #{formNm}
+			, #{formSourc}
+			, #{formSample}
+			, #{formUse}
+			, #{formInfo}
+		)
+	</insert>
+	
+	<!-- 결재양식리스트 조회(기안자용) -->	
+	<select id="selectSanctionFormList" resultType="SanctionFormVO">
+		SELECT
+			FORM_NO		/* 양식번호 */
+			, FORM_NM	/* 양식명 */
+		FROM 
+			SANCTION_FORM
+		WHERE
+			FORM_USE = 'Y'
+		ORDER BY FORM_NO ASC
+	</select>
+		
+	<!-- 결재양식 상세조회 -->	
+	<select id="selectSanctionFormSourc" resultType="SanctionFormVO" parameterType="int">
+		SELECT
+			FORM_NO			/* 양식번호 */
+			, FORM_NM		/* 양식명 */
+			, FORM_SOURC	/* 양식html소스 */
+			, FORM_SAMPLE	/* 샘플html소스 */
+			, FORM_INFO 	/* 양식설명 */
+		FROM 
+			SANCTION_FORM
+		WHERE 
+			FORM_NO = #{formNo}
+	</select>
+	
+	<!-- 결재양식리스트 조회(관리자용) -->
+	<select id="selectSanctionFormAllList" resultType="SanctionFormVO">
+		SELECT
+			FORM_NO			/* 양식번호 */
+			, FORM_NM		/* 양식명 */
+			, FORM_USE		/* 양식 사용여부 */
+			, FORM_INFO 	/* 양식설명 */
+		FROM 
+			SANCTION_FORM
+		ORDER BY FORM_NO ASC
+	</select>
+	
+	
+</mapper>

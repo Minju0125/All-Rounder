@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE tiles-definitions PUBLIC
+       "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+       "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+       
+<tiles-definitions>
+<!-- 	controller 가 선택할 view 정보 : /definition_name.tiles -->
+	<definition name="abstractDef" template="/WEB-INF/views/template.jsp">
+		<put-attribute name="title" value="Company305" />
+		<put-attribute name="preScript" value="/includee/preScript.jsp"/>
+		<put-attribute name="cssScript" value="/includee/cssScript.jsp"/>
+		<put-attribute name="headerMenu" value="/includee/headerMenu.jsp" />
+		<put-attribute name="leftMenu" value="/includee/leftMenu.jsp" />
+		
+		<put-attribute name="footer" value="/includee/footer.jsp"/>
+		<put-attribute name="postScript" value="/includee/postScript.jsp"/>
+	</definition>
+	
+	<definition name="index" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/index.jsp" />
+	</definition>
+	
+	<definition name="indexAdmin" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/indexAdmin.jsp" />
+	</definition>
+	
+</tiles-definitions>       

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.pms.workstatus.dao.WorkStatusDAO"> 
+	 
+	<resultMap type="ProjectVO" id="proMap" autoMapping="true">
+		<id property="proSn" column="PRO_SN"/>
+		<collection property="pjobList"  ofType="PjobVO" autoMapping="true">
+			<id property="jobSn" column="JOB_SN"/> 
+			<id property="proSn" column="PRO_SN"/>   
+		<collection property="chargerList" ofType="ChargerVO" autoMapping="true">
+			<id property="empCd" column="EMP_CD" /> 
+			<association property="emp" javaType="EmployeeVO" autoMapping="true">
+			</association>
+		
+			
+		</collection>
+		</collection>
+		  
+	</resultMap>
+	
+	
+	<select id="selectTotalRecord" parameterType="PaginationInfo"   resultType="int">
+	SELECT
+		count(*) 
+	FROM
+		PJOB P
+	JOIN
+		CHARGER C ON P.JOB_SN = C.JOB_SN
+	JOIN
+		employee E1 ON P.job_writer = E1.emp_cd
+	JOIN
+		employee E2 ON C.EMP_CD = E2.emp_cd
+	WHERE
+		C.EMP_CD = #{empCd} 
+		<if
+			test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+			AND INSTR(JOB_SJ, #{simpleCondition.searchWord}) > 0
+		</if>	 
+	</select>
+	
+	<select id="selectWorkStatusList" parameterType="PaginationInfo" resultMap="proMap" >   
+	    SELECT  
+	   		J.PRO_NM,
+		    P.JOB_SN,
+		    P.PRO_SN, 
+		    P.JOBU_SN,
+		    P.JOB_SJ,
+		    E1.EMP_NAME AS JOB_WRITER,
+		    P.JOB_RDATE,
+		    P.JOB_STCD,
+		    P.JOB_PRIORT,
+		    P.JOB_BDATE,
+		    P.JOB_EDATE,
+		    P.JOB_CDATE,
+		    P.JOB_CN,
+		    P.PRO_FILE_CD,
+		    P.JOB_PROGRS,
+		    P.JOB_SCOPE,
+		    E2.EMP_NAME AS EMP_NAME
+		FROM
+    		PJOB P
+		JOIN
+    		CHARGER C ON P.JOB_SN = C.JOB_SN
+		JOIN
+		    EMPLOYEE E1 ON P.JOB_WRITER = E1.EMP_CD
+		JOIN
+    		EMPLOYEE E2 ON C.EMP_CD = E2.EMP_CD
+    	JOIN
+    		PROJECT J ON J.PRO_SN = P.PRO_SN
+		WHERE  
+    		C.EMP_CD = #{empCd}
+	</select>
+	
+	
+	
+</mapper>
+
+	

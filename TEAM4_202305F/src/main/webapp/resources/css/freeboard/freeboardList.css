@@ -1,0 +1,230 @@
+@charset "UTF-8";
+
+#insertReply{
+	float: right;
+}
+#answerReply{
+	width: 90%;
+}
+#comments {
+    margin-top: 20px;
+}
+
+.comment small {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+    color: #777;
+}
+
+.comment span {
+    font-weight: bold;
+    color: #333;
+}
+
+#commentInput {
+    width: 85%;
+    margin-bottom: 10px;
+}
+
+#insertReply {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+#insertReply:hover {
+    background-color: #45a049;
+}
+
+/* 대댓글 스타일 */
+#commentList {
+    list-style-type: none;
+    padding-left: 20px;
+}
+
+#commentList li {
+    margin-bottom: 10px;
+}
+
+.replyArea {
+    border-left: 2px solid #4CAF50;
+    padding-left: 10px;
+    margin-top: 10px;
+}
+
+.replyArea i {
+    color: #4CAF50;
+}
+
+#replyForm {
+    display: none;
+}
+
+#reAnswer {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+#reAnswer:hover {
+    background-color: #2980b9;
+}
+#reAnswer{
+	float: right;
+}
+#updateShow{
+	width: 85%;
+}
+#replyShow{
+	width: 85%;
+}
+#textReplyUpdate{
+	display: none;
+}
+#replyDelete{
+	float: right;
+}
+#replyUpdate{
+	float: right;
+}
+#answerDelete{
+	float: right;
+}
+#answerUpdate{
+	float: right;
+}
+#insertFreeBtn{
+	float: right;
+}
+#fileAttachment{
+	float: right;
+}
+#fileAttachmentName{
+	float: right;
+}
+#editor{
+	height: 500px;
+}
+.img-fluid{
+	width: 215px;
+	height: 200px;
+}
+.plyr__video-wrapper{
+	width: 35%;
+	margin-left: 30%;
+}
+.w-100{
+	height: 320px;
+}
+#replyUpdate,
+#replyDelete {
+  background-color: #4caf50; /* Green background color */
+  border: none; /* Remove border */
+  color: white; /* White text color */
+  padding: 4px 10px; /* Add some padding */
+  text-align: center; /* Center text */
+  text-decoration: none;
+  display: inline-block;
+  font-size: 10px; /* Set font size */
+  margin: 4px 2px; /* Add some margin */
+  cursor: pointer; /* Add a pointer cursor on hover */
+  border-radius: 4px; /* Optional: Add rounded corners */
+}
+
+#replyUpdate:hover,
+#replyDelete:hover {
+  background-color: #45a049; /* Darker green color on hover */
+}
+#answerUpdate,
+#answerDelete {
+  background-color: #3498db; /* Blue background color */
+  border: none; /* Remove border */
+  color: white; /* White text color */
+  padding: 8px 15px; /* Add some padding */
+  text-align: center; /* Center text */
+  text-decoration: none;
+  display: inline-block;
+  font-size: 12px; /* Set font size */
+  margin: 4px 2px; /* Add some margin */
+  cursor: pointer; /* Add a pointer cursor on hover */
+  border-radius: 4px; /* Optional: Add rounded corners */
+}
+
+#answerUpdate:hover,
+#answerDelete:hover {
+  background-color: #2980b9; /* Darker blue color on hover */
+}
+#updateAnswer,
+#updateAnswerCancel {
+  background-color: #d9534f; /* Red background color */
+  border: none; /* Remove border */
+  color: white; /* White text color */
+  text-align: center; /* Center text */
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px; /* Set font size */
+  margin: 4px 2px; /* Add some margin */
+  cursor: pointer; /* Add a pointer cursor on hover */
+  border-radius: 4px; /* Optional: Add rounded corners */
+}
+
+#updateAnswer:hover,
+#updateAnswerCancel {
+  background-color: #c9302c; /* Darker red color on hover */
+}
+#replyAnswer,
+#replyAnswerCancel {
+  background-color: #d9534f; /* Blue background color */
+  border: none; /* Remove border */
+  color: white; /* White text color */
+  text-align: center; /* Center text */
+  text-decoration: none;
+  display: inline-block;
+  font-size: 14px; /* Set font size */
+  margin: 4px 2px; /* Add some margin */
+  cursor: pointer; /* Add a pointer cursor on hover */
+  border-radius: 4px; /* Optional: Add rounded corners */
+}
+
+#replyAnswer:hover,
+#replyAnswerCancel:hover {
+  background-color: #46b8da; /* Darker blue color on hover */
+}
+textarea {
+  width: 100%; /* Set the width to 100% */
+  padding: 10px; /* Add padding */
+  box-sizing: border-box; /* Include padding and border in the total width */
+  border: 1px solid #ddd; /* Add a border */
+  border-radius: 4px; /* Optional: Add rounded corners */
+  resize: vertical; /* Allow vertical resizing */
+  min-height: 60px; /* Set a minimum height */
+  font-size: 14px; /* Set font size */
+  line-height: 1.5; /* Set line height */
+}
+
+/* Optional: Style on focus */
+textarea:focus {
+  border-color: #5bc0de; /* Change border color on focus */
+  outline: none; /* Remove default focus outline */
+}
+#searchFree {
+  display: flex;
+  justify-content: space-between;
+}
+
+#searchFree form-control {
+  flex: 1; /* 각각의 input 요소가 남은 공간을 동일하게 차지하도록 설정합니다. */
+  margin-right: 20%px; /* 원하는 간격을 조절합니다. */
+}
+#searchFreeText{
+    width: 20%;
+    float: inline-start;
+    margin-left: 37.5%;
+}

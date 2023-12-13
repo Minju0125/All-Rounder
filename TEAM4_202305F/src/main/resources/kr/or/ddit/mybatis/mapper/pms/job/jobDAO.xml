@@ -1,0 +1,560 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.pms.job.dao.JobDAO">
+
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        	수정자     수정내용               -->
+<!--  ==========   		======    ==============        -->
+<!--  2023. 11. 08.     김보영     최초작성               -->
+<!--  2023. 11. 08.     김보영     참여자목록 , 일감상태카운팅   -->
+<!--  2023. 11. 13.     김보영     일감목록               -->
+<!--  2023. 11. 15.     김보영     일감등록,담당자등록               -->
+<!--  2023. 11. 21.     김보영     일감상세              -->
+<!--  2023. 11. 23.     김보영     일감로그       -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+	
+	<resultMap type="ProjectVO" id="proInfo" autoMapping="true">
+		<id property="proSn" column="PRO_SN"/>
+		<association property="common" javaType="CommonVO"/>
+		<collection property="pmemberList" ofType="PmemberVO" autoMapping="true">
+			<id property="empCd" column="EMP_CD" />
+			<id property="proSn" column="PRO_SN"/>
+			<association property="emp" javaType="EmployeeVO" autoMapping="true">
+				<association property="dept" javaType="DeptVO" autoMapping="true" />	
+			</association>
+		</collection> 
+		<collection property="pjobList" ofType="PjobVO" autoMapping="true">
+			<id property="jobSn" column="JOB_SN" />
+			<id property="proSn" column="PRO_SN"/>
+			<collection property="chargerList" ofType="ChargerVO"  autoMapping="true">
+				<id property="proSn" column="PRO_SN"/>
+				<id property="jobSn" column="JOB_SN" />
+				<id property="empCd" column="EMP_CD" />
+			</collection>
+		</collection>
+	</resultMap>
+	
+	
+	<resultMap type="PjobVO" id="jobList" autoMapping="true">
+		<id property="jobSn" column="JOB_SN" />
+		<id property="proSn" column="PRO_SN"/>
+		<collection property="chargerList" ofType="ChargerVO"  autoMapping="true">
+			<id property="empCd" column="EMP_CD" />
+			<association property="emp" javaType="EmployeeVO" autoMapping="true" />
+		</collection>
+	</resultMap>
+	
+	
+	
+	<resultMap type="PmemberVO" id="pMemberList" autoMapping="true">
+		<id property="empCd" column="EMP_CD" />
+		<id property="proSn" column="PRO_SN"/>
+			<association property="emp" javaType="EmployeeVO" autoMapping="true">
+				<association property="dept" javaType="DeptVO" autoMapping="true" />	
+			</association>
+	</resultMap>
+	
+	<resultMap type="ChargerVO" id="chargerList" autoMapping="true">
+		<id property="empCd" column="EMP_CD" />
+		<association property="emp" javaType="EmployeeVO" autoMapping="true" />
+	</resultMap>
+	
+	<!-- 일감완료일 입력 -->
+	<update id="updateCdate" parameterType="int">
+		UPDATE PJOB
+		SET JOB_CDATE= SYSDATE
+		WHERE JOB_SN=#{jobSn}
+	</update>
+	
+	
+	<!-- 나의 요청내역 -->
+	<select id="selectMyReq" parameterType="String" resultType="PjobVO">
+		SELECT 
+			J.JOB_SN
+			,J.PRO_SN
+			,J.JOB_SJ
+			,TO_CHAR(TO_DATE(J.JOB_EDATE,'YYYYMMDD'),'YYYY-MM-DD') AS jobEdate
+		FROM (
+			SELECT *
+			FROM PJOB
+			WHERE JOB_STCD = '2'
+			OR JOB_STCD IS NULL
+		)J
+		LEFT OUTER JOIN CHARGER C
+		ON C.JOB_SN = J.JOB_SN
+		AND C.PRO_SN = J.PRO_SN
+		WHERE C.EMP_CD = #{empCd}
+		ORDER BY J.JOB_EDATE ASC
+	</select>
+	
+	<!-- 일감참조된 이슈 목록 -->
+	<select id="selectRefIssueList" parameterType="String" resultType="IssueVO">
+		SELECT 
+			GET_EMP_NAME(I.EMP_CD) AS writer
+			, I.ISSUE_SJ
+			, CASE 
+				WHEN I.ISSUE_IMP = 1 THEN '긴급'
+				WHEN I.ISSUE_IMP = 2 THEN '중간'
+				WHEN I.ISSUE_IMP = 3 THEN '낮음'
+				ELSE NULL
+			END AS issueImp
+			, I.JOB_SN
+			, I.PRO_SN
+			, I.ISSUE_NO
+			, CASE 
+				WHEN I.ISSUE_STTUS = 1 THEN '진행'
+				WHEN I.ISSUE_STTUS = 2 THEN '보류'
+				WHEN I.ISSUE_STTUS = 3 THEN '완료'
+				ELSE NULL
+			END AS issueSttus
+			, TO_CHAR(TO_DATE(I.ISSUE_EDATE,'YYYYMMDD'),'YYYY-MM-DD') AS issueEdate
+			,(
+				SELECT 
+					J.JOB_SJ
+				FROM PJOB J
+				WHERE I.JOB_SN = J.JOB_SN
+			)AS refJobName
+		FROM ISSUE I
+		LEFT OUTER JOIN PJOB J
+		ON I.JOB_SN = J.JOB_SN
+		AND I.PRO_SN = J.PRO_SN
+		WHERE I.PRO_SN = #{proSn}
+		AND I.JOB_SN IS NOT NULL
+		ORDER BY ISSUE_IMP ASC
+	</select>
+	
+	<!-- 대시보드 일감목록 -->
+	<select id="dashJobList" parameterType="String" resultType="PjobVO">
+		SELECT
+			J.JOB_SN
+		    , J.PRO_SN
+		    , (SELECT T.PRO_NM FROM PROJECT T WHERE T.PRO_SN = J.PRO_SN) AS findName2
+		    , J.JOBU_SN
+		    , J.JOB_SJ
+		    , J.JOB_WRITER 
+		    , GET_EMP_NAME(J.JOB_WRITER) AS findName
+		    , J.JOB_RDATE
+		    , J.JOB_STCD
+		    , J.JOB_PRIORT
+		    , TO_CHAR(TO_DATE(J.JOB_BDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_BDATE
+    		, TO_CHAR(TO_DATE(J.JOB_EDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_EDATE
+		    , TO_CHAR(J.JOB_CDATE,'YYYY-MM-DD') AS JOB_CDATE
+		    , J.JOB_CN
+		    , J.PRO_FILE_CD
+		    , J.JOB_PROGRS
+		    , J.JOB_SCOPE
+		FROM PJOB J
+		LEFT OUTER JOIN CHARGER C
+		ON C.JOB_SN = J.JOB_SN
+		AND C.PRO_SN = J.PRO_SN
+		WHERE C.EMP_CD =  #{empCd}
+		ORDER BY J.JOB_EDATE DESC
+	
+	</select>
+	
+	
+	
+	<!-- 일감수정 -->
+	<update id="updateJob" parameterType="PjobVO">
+		UPDATE PJOB
+		SET 
+			JOB_SCOPE = 1	
+			, JOB_SJ=#{jobSj}
+			, JOB_PROGRS=#{jobProgrs}
+			, JOB_STCD=#{jobStcd}
+			, JOB_PRIORT=#{jobPriort}
+			, JOB_BDATE=#{jobBdate}
+			, JOB_EDATE=#{jobEdate}
+			, JOB_CN=#{jobCn}
+		WHERE JOB_SN=#{jobSn}
+		AND PRO_SN= #{proSn}
+	</update>
+	
+	<!-- 하위일감목록 -->
+	<select id="rowJList" resultType="PjobVO" parameterType="int">
+		SELECT
+			JOB_SN 
+			, JOB_SJ
+		FROM PJOB 
+		WHERE JOBU_SN = #{jobSn}	
+	</select>
+	
+	<!--일감 상세보기 -->
+	<select id="jobDetail" parameterType="PjobVO" resultMap="jobList">
+		SELECT 
+		    J.JOB_SN
+		    , J.PRO_SN
+		    , J.JOBU_SN
+		    , J.JOB_SJ
+		    , J.JOB_WRITER 
+		    , GET_EMP_NAME(J.JOB_WRITER) AS findName
+		    , J.JOB_RDATE
+		    , J.JOB_STCD
+		    , J.JOB_PRIORT
+		    , TO_CHAR(TO_DATE(J.JOB_BDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_BDATE
+    		, TO_CHAR(TO_DATE(J.JOB_EDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_EDATE
+		    , TO_CHAR(J.JOB_CDATE,'YYYY-MM-DD') AS JOB_CDATE
+		    , J.JOB_CN
+		    , J.PRO_FILE_CD
+		    , J.JOB_PROGRS
+		    , J.JOB_SCOPE
+		    , C.EMP_PROFILE_IMGS
+		FROM
+			PJOB J
+		INNER JOIN( 
+			SELECT 
+			    LISTAGG(NVL(E.EMP_PROFILE_IMG,'/resources/images/basic.png'), ', ') WITHIN GROUP (ORDER BY E.EMP_PROFILE_IMG) AS EMP_PROFILE_IMGS,
+			    C.JOB_SN AS JOB_SN,
+			    C.PRO_SN AS PRO_SN
+			FROM EMPLOYEE E
+			INNER JOIN CHARGER C ON C.EMP_CD = E.EMP_CD
+			GROUP BY C.JOB_SN, C.PRO_SN
+		) C
+		ON J.JOB_SN = C.JOB_SN
+		AND J.PRO_SN = C.PRO_SN
+		WHERE  J.PRO_SN =  #{proSn}
+		AND J.JOB_SN = #{jobSn}
+	</select>
+	
+	<!-- 일감상태 카운트 -->
+	<select id="jobCount" resultType="PjobVO" parameterType="PjobVO">
+		
+		SELECT 
+			SUM(DECODE(J.JOB_STCD, '1', CNT, 0)) AS AA_CNT
+			,SUM(DECODE(J.JOB_STCD, '2', CNT, 0)) AS BB_CNT
+			,SUM(DECODE(J.JOB_STCD, '3', CNT, 0)) AS CC_CNT
+			,SUM(DECODE(J.JOB_STCD, '4', CNT, 0)) AS DD_CNT
+			,SUM(DECODE(J.JOB_STCD, '5', CNT, 0)) AS EE_CNT
+		FROM (
+			SELECT 
+				J.JOB_STCD
+				, COUNT(*) AS CNT
+			FROM PJOB J
+			INNER JOIN CHARGER C
+			ON J.JOB_SN = C.JOB_SN
+			AND J.PRO_SN = C.PRO_SN
+			WHERE J.PRO_SN = #{proSn}
+			AND  C.EMP_CD = #{empCd1}
+			GROUP BY J.JOB_STCD
+		) J
+		
+	</select>
+	
+	
+	<!-- 참여자리스트 -->
+	<select id="proMemList" resultMap="pMemberList" parameterType="PmemberVO">
+	
+		SELECT 
+			R.PRO_SN
+			, R.PRO_NM
+			, R.PRO_BDATE
+			, R.PRO_EDATE
+			, R.PRO_STTUS
+			, R.PRO_PROGRS
+			, P.EMP_CD
+			, E.EMP_NAME
+			, E.EMP_PROFILE_IMG
+			, D.DEPT_NAME
+			, P.PRO_LEADER
+		FROM PROJECT R
+			LEFT OUTER JOIN PMEMBER P
+				ON R.PRO_SN = P.PRO_SN
+			LEFT OUTER JOIN EMPLOYEE E
+				ON P.EMP_CD = E.EMP_CD
+			LEFT OUTER JOIN DEPT D
+				ON D.DEPT_CD = E.DEPT_CD
+		WHERE R.PRO_SN = #{proSn}
+		AND E.EMP_LOGIN_FLAG NOT IN 'L'
+		ORDER BY P.PRO_LEADER DESC
+	
+	</select>
+	
+	<!-- 일감의 담당자 -->
+	<select id="chargerList" resultMap="chargerList" parameterType="int">
+		SELECT 
+			E.EMP_NAME
+			, E.EMP_PROFILE_IMG
+			, C.JOB_SN
+			, C.PRO_SN 
+			, C.EMP_CD
+		FROM EMPLOYEE E
+		INNER JOIN CHARGER C
+		ON C.EMP_CD = E.EMP_CD
+		WHERE C.JOB_SN = #{jobSn}
+	</select>
+	
+	<!-- 상위일감 목록 -->
+	<select id="UJobList" parameterType="String" resultType="PjobVO">
+	
+		SELECT 
+			J.JOB_SJ
+			, J.JOB_SN
+			, TO_CHAR(TO_DATE(J.JOB_BDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_BDATE
+			, TO_CHAR(TO_DATE(J.JOB_EDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_EDATE
+		FROM PJOB J
+		LEFT OUTER JOIN CHARGER C
+		ON C.PRO_SN = J.PRO_SN
+		AND C.JOB_SN = J.JOB_SN
+		WHERE C.EMP_CD = #{empCd}
+		AND J.JOBU_SN IS NULL 
+		AND J.PRO_SN = #{proSn,jdbcType=VARCHAR}
+	
+	</select>
+	
+	
+	<sql id="searchFrag">
+    	<if test="simpleCondition neq null and @org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+    		<choose>
+    			<when test="simpleCondition.searchType eq 'title'">
+    				AND INSTR(J.JOB_SJ, #{simpleCondition.searchWord}) > 0
+    			</when>
+    			<when test="simpleCondition.searchType eq 'charger'">
+    				AND INSTR(GET_EMP_NAME(J.JOB_WRITER), #{simpleCondition.searchWord}) > 0
+    			</when>
+    			<otherwise>
+    				AND
+    				(
+	   					INSTR(J.JOB_SJ, #{simpleCondition.searchWord}) > 0
+	   					OR
+	   					INSTR(GET_EMP_NAME(J.JOB_WRITER), #{simpleCondition.searchWord}) > 0
+    				)
+    			</otherwise>
+    		</choose>
+    	</if>
+	</sql>
+	
+	<!-- 하나의 프로젝트에 해당하는 일감목록 -->
+	<select id="selectPjobList" resultType="PjobVO" parameterType="PaginationInfo">
+		SELECT B.*
+		FROM(
+			SELECT 
+				ROWNUM rnum , A.*
+			FROM(
+				SELECT 
+				    J.JOB_SN
+				    , J.PRO_SN
+				    , J.JOBU_SN
+				    , J.JOB_SJ
+				    , J.JOB_WRITER 
+				    , GET_EMP_NAME(J.JOB_WRITER) AS findName
+				    , (SELECT T.PRO_NM FROM PROJECT T WHERE T.PRO_SN = J.PRO_SN) AS findName2
+				    , J.JOB_RDATE
+				    , J.JOB_STCD
+				    , J.JOB_PRIORT
+				    , TO_CHAR(TO_DATE(J.JOB_BDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_BDATE
+				    , TO_CHAR(TO_DATE(J.JOB_EDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_EDATE
+				    , TO_CHAR(J.JOB_CDATE,'YYYY-MM-DD') AS JOB_CDATE
+				    , J.JOB_CN
+				    , J.PRO_FILE_CD
+				    , J.JOB_PROGRS
+				    , J.JOB_SCOPE
+				    , C.EMP_PROFILE_IMGS
+				FROM
+					PJOB J
+				INNER JOIN( 
+					SELECT 
+					    LISTAGG(NVL(E.EMP_PROFILE_IMG,'/resources/images/basic.png'), ', ') WITHIN GROUP (ORDER BY E.EMP_PROFILE_IMG) AS EMP_PROFILE_IMGS,
+					    C.JOB_SN AS JOB_SN,
+					    C.PRO_SN AS PRO_SN
+					FROM EMPLOYEE E
+					INNER JOIN CHARGER C ON C.EMP_CD = E.EMP_CD
+					GROUP BY C.JOB_SN, C.PRO_SN
+				) C
+				ON J.JOB_SN = C.JOB_SN
+				AND J.PRO_SN = C.PRO_SN
+				WHERE  J.PRO_SN =  #{detailCondition.proSn}
+		     	<include refid="searchFrag" />
+				START WITH
+					J.JOBU_SN IS NULL
+				CONNECT BY PRIOR J.JOB_SN = J.JOBU_SN
+				)A	
+			)B
+		WHERE RNUM BETWEEN #{startRow} AND #{endRow}
+	</select>
+	
+	<!-- 총 레코드수  -->
+	<select id="selectTotalRecord" resultType="int" parameterType="PaginationInfo">
+		SELECT 
+			COUNT(*)
+		FROM
+			PJOB J
+		INNER JOIN( 
+			SELECT 
+			    LISTAGG(NVL(E.EMP_PROFILE_IMG,'/resources/images/basic.png'), ', ') WITHIN GROUP (ORDER BY E.EMP_PROFILE_IMG) AS EMP_PROFILE_IMGS,
+			    C.JOB_SN AS JOB_SN,
+			    C.PRO_SN AS PRO_SN
+			FROM EMPLOYEE E
+			INNER JOIN CHARGER C ON C.EMP_CD = E.EMP_CD
+			GROUP BY C.JOB_SN, C.PRO_SN
+		) C
+		ON J.JOB_SN = C.JOB_SN
+		AND J.PRO_SN = C.PRO_SN
+		WHERE  J.PRO_SN =  #{detailCondition.proSn}
+     	<include refid="searchFrag" />
+		START WITH
+			J.JOBU_SN IS NULL
+		CONNECT BY PRIOR J.JOB_SN = J.JOBU_SN
+	</select>
+	
+	<!-- 일감의 작성자를 찾는 쿼리 -->
+	<select id="selectWriter" resultType="EmployeeVO" parameterType="String">
+		SELECT 
+			EMP_NAME
+		FROM EMPLOYEE
+		WHERE EMP_CD =#{empCd}
+	</select>
+	
+	<!-- 일감의 번호를 등록하기 위한 시퀀스-->
+	<select id="selectJobSn" resultType="int">
+		SELECT JOB_SEQ.NEXTVAL AS jobSn FROM DUAL
+	</select>
+	
+	<!-- 일감등록 -->
+	<insert id="insertJob" parameterType="PjobVO">
+		<selectKey resultType="string" order="BEFORE" keyProperty="proFileCd">
+			SELECT 
+				#{proSn}|| TO_CHAR(PFILE_SEQ.NEXTVAL,'FM000') AS proFileCd 
+			FROM DUAL
+		</selectKey>
+		INSERT INTO PJOB
+		(
+			JOB_SN
+			, PRO_SN
+			, JOBU_SN
+			, JOB_SJ
+			, JOB_WRITER
+			, JOB_RDATE
+			, JOB_STCD
+			, JOB_PRIORT
+			, JOB_BDATE
+			, JOB_EDATE
+			, JOB_CDATE
+			, JOB_CN
+			, PRO_FILE_CD
+			, JOB_PROGRS
+			, JOB_SCOPE
+		)
+		VALUES(
+			#{jobSn,jdbcType=NUMERIC}
+			, #{proSn,jdbcType=VARCHAR}
+			, #{jobuSn,jdbcType=NUMERIC}
+			, #{jobSj,jdbcType=VARCHAR}
+			, #{jobWriter,jdbcType=VARCHAR}
+			, sysdate	
+			, #{jobStcd,jdbcType=VARCHAR}
+			, #{jobPriort,jdbcType=NUMERIC}
+			, #{jobBdate,jdbcType=VARCHAR}
+			, #{jobEdate,jdbcType=VARCHAR}
+			, #{jobCdate,jdbcType=VARCHAR}
+			, #{jobCn,jdbcType=VARCHAR}
+			, #{proFileCd,jdbcType=VARCHAR}
+			, #{jobProgrs,jdbcType=NUMERIC}
+			, 1	
+		)
+	</insert>
+	
+	<!-- 담당자등록 -->
+	<insert id="insertCharger" parameterType="ChargerVO">
+		INSERT INTO CHARGER
+		(
+			EMP_CD
+			, JOB_SN
+			, PRO_SN
+		)
+		VALUES
+		(
+			#{empCd}
+			, #{jobSn}
+			, #{proSn}
+		)
+	</insert>
+	
+	<!-- 일감삭제-->
+	<delete id="deleteJob" parameterType="PjobVO">
+		DELETE FROM PJOB
+		WHERE JOB_SN=#{jobSn}
+		AND JOB_WRITER=#{empCd1}
+		AND JOBU_SN IS NOT NULL
+	</delete>
+	
+	<!-- 담당자삭제 -->
+	<delete id="deleteCharger" parameterType="ChargerVO">
+		DELETE 
+		FROM CHARGER
+		WHERE JOB_SN = #{jobSn}
+		AND PRO_SN = #{proSn}
+	</delete>
+	
+	
+	<!-- 해당 프로젝트의 내 일감 조회 -->
+	<select id="myJobList" resultMap="jobList"  parameterType="ChargerVO">
+		SELECT	
+			C.EMP_CD
+			, C.JOB_SN
+			, C.PRO_SN
+			, J.JOB_SJ
+			, J.JOB_PRIORT
+			, J.JOB_PROGRS
+			, TO_CHAR(TO_DATE(J.JOB_EDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_EDATE
+			, TO_CHAR(TO_DATE(J.JOB_BDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_BDATE
+			, TO_CHAR(J.JOB_CDATE,'YYYY-MM-DD') AS JOB_CDATE
+			, J.JOB_STCD
+		FROM PJOB J 
+		LEFT OUTER JOIN CHARGER C	
+		ON J.JOB_SN = C.JOB_SN
+		AND J.PRO_SN = C.PRO_SN
+		WHERE C.EMP_CD = #{empCd,jdbcType=VARCHAR} 
+		AND C.PRO_SN =#{proSn,jdbcType=VARCHAR} 
+		ORDER BY J.JOB_EDATE,  J.JOB_PRIORT ASC
+	</select>
+	
+	
+	<!-- 프로젝트정보 -->
+	<select id="projectInfo" resultType="ProjectVO" parameterType="String">
+		SELECT 
+			PRO_NM
+			, TO_CHAR(TO_DATE(PRO_BDATE,'YYYYMMDD'),'YYYY-MM-DD') AS PRO_BDATE
+			, TO_CHAR(TO_DATE(PRO_EDATE,'YYYYMMDD'),'YYYY-MM-DD') AS PRO_EDATE
+			,PRO_PROGRS
+			,PRO_SN
+			,PRO_STTUS
+		FROM PROJECT
+		WHERE PRO_SN=#{proSn}
+	</select>
+	
+	<!-- 사번으로 이름찾기 -->
+	<select id="selectChanger" parameterType="String">
+		SELECT 
+			EMP_NAME
+		FROM EMPLOYEE
+		WHERE EMP_CD = #{changer}
+	</select>
+	
+	<!-- 로그등록 -->
+	<insert id="insertPLog" parameterType="PLogVO">
+		INSERT INTO PLOG
+		(PLOG_NO, JOB_SN, PRO_SN, PLOG_WRITER, PLOG_CN, PRO_FILE_CD, PLOG_CDATE)
+		VALUES
+		(
+			ZBF_GET_PLOG('now')
+			, #{jobSn,jdbcType=NUMERIC}
+			, #{proSn,jdbcType=VARCHAR}
+			, #{plogWriter,jdbcType=VARCHAR}
+			, #{plogCn,jdbcType=VARCHAR}
+			, #{proFileCd,jdbcType=VARCHAR}
+			, sysdate
+		)
+		
+	</insert>	
+	
+	<!-- 로그조회 -->
+	<select id="selectLogList" parameterType="int">
+		SELECT 
+			PLOG_CDATE
+			, PLOG_CN
+			, PLOG_WRITER
+		FROM PLOG
+		WHERE JOB_SN = #{jobSn}
+		ORDER BY PLOG_CDATE DESC
+	</select>
+</mapper>

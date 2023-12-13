@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일         수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 21. 전수진     최초작성               -->
+<!--  2023. 11. 22. 전수진     insert selectKey변경      -->
+<!--  2023. 11. 23. 전수진     결재문서 수정 및 삭제시 결재라인삭제     -->
+<!--  2023. 11. 25. 전수진     결재진행시 결재라인수정     -->
+<!--  2023. 11. 27. 전수진     결재진행시 서명이미지처리     -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+
+<mapper namespace="kr.or.ddit.groupware.sanction.dao.SanctionLineDAO">
+
+	<!-- 결재라인 생성 -->
+	<insert id="insertSanctionLine" parameterType="SanctionLineVO">
+	<selectKey order="BEFORE" keyProperty="sanctnLineNo" resultType="string">
+		SELECT 'SL'||TO_CHAR(SYSDATE,'YYMMDD')||LPAD(NVL(MAX(SUBSTR(SANCTN_LINE_NO,9)),0)+1,3,'0')
+		FROM SANCTION_LINE
+		WHERE SUBSTR(SANCTN_LINE_NO,3,6) = TO_CHAR(SYSDATE,'YYMMDD')
+	</selectKey>
+		INSERT INTO SANCTION_LINE (
+		    SANCTN_LINE_NO 		/* 결재라인번호 */
+		    , SANCTN_NO 		/* 결재문서번호 */
+		    , SANCTNER 			/* 결재자 */
+		    , REAL_SANCTNER 	/* 실결재자 */
+		    , SANCTN_ORDR		/* 결재순서 */
+		    , SANCTNLINE_STTUS 	/* 결재상태 */
+		    , SANCTNER_ENDYN 	/* 최종결재자여부 */
+		) VALUES (
+			  #{sanctnLineNo}
+		    , #{sanctnNo}
+		    , #{sanctner}
+		    , #{realSanctner}
+		    , #{sanctnOrdr}
+		    , #{sanctnlineSttus}
+		    , #{sanctnerEndyn}
+		)
+	</insert>
+	
+	
+	<!-- 결재라인 삭제 -->
+	<delete id="deleteSanctionLine" parameterType="String">
+		DELETE FROM SANCTION_LINE
+		WHERE
+		   SANCTN_LINE_NO =  #{sanctnLineNo}
+	</delete>
+	
+	<!-- 결재라인정보 조회 -->
+	<select id="selectSanctionLine" resultType="SanctionLineVO" parameterType="SanctionLineVO">
+		SELECT
+			SANCTN_LINE_NO
+		    , SANCTN_NO
+		    , SANCTNER
+		    , REAL_SANCTNER
+		    , SANCTN_ORDR
+		    , SANCTN_OPINION
+		    , SIGN_IMG
+		    , SANCTNER_ENDYN
+		    , SANCTNLINE_STTUS
+		    , SIGN_DATE
+		FROM
+		    SANCTION_LINE
+		WHERE
+		    REAL_SANCTNER = #{realSanctner} AND SANCTN_NO = #{sanctnNo}
+	</select>
+	
+	<!-- 결재진행시 결재라인 수정 -->
+	<update id="updateSanctionLine" parameterType="SanctionLineVO">
+		UPDATE SANCTION_LINE
+		SET
+		    REAL_SANCTNER = #{realSanctner} 			/* 실결재자 */
+		    , SANCTN_OPINION = #{sanctnOpinion} 		/* 결재의견 */
+		    , SIGN_IMG = #{signImg} 					/* 서명이미지 */
+		    , SANCTNLINE_STTUS = #{sanctnlineSttus} 	/* 결재상태 */
+		   	, SIGN_DATE = SYSDATE
+		WHERE
+		     SANCTN_LINE_NO = #{sanctnLineNo}
+	</update>
+	
+	<!-- 결재자 서명이미지 복사 -->
+	<update id="updateSingImg" parameterType="Map">
+		UPDATE SANCTION_LINE
+		SET   
+			SIGN_IMG = (SELECT EMP_SIGN_IMG FROM EMPLOYEE WHERE EMP_CD = #{param.empCd})
+		WHERE 
+			SANCTN_LINE_NO = #{param.sanctnLineNo}
+	</update>
+	
+	<!-- 대결권설정한 결재자의 결재라인변경을 위한 list 출력 -->
+	<select id="selectSanctionLineList" resultType="SanctionLineVO">
+		SELECT
+		    SANCTN_LINE_NO
+		    , SANCTN_NO
+		    , SANCTNER
+		    , REAL_SANCTNER
+		    , SANCTN_ORDR
+		    , SANCTN_OPINION
+		    , SIGN_IMG
+		    , SANCTNER_ENDYN
+		    , SANCTNLINE_STTUS
+		    , SIGN_DATE
+		FROM
+		    SANCTION_LINE
+		WHERE
+		    SANCTNLINE_STTUS = 'I'
+	</select>
+	
+	<!-- 대결권시작일자에 결재문서가 있을경우 대결권수여자로 변경 -->
+	<update id="updateRealSanctner" parameterType="SanctionLineVO">
+	    UPDATE SANCTION_LINE
+		SET
+		    REAL_SANCTNER = #{realSanctner}
+		WHERE
+		   SANCTN_LINE_NO = #{sanctnLineNo}
+	</update>
+	
+</mapper>

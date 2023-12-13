@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 9.  전수진     최초작성               -->
+<!--  2023. 11. 13. 전수진     필독 상단고정 쿼리추가               -->
+<!--  2023. 11. 14. 전수진     주석추가               -->
+<!--  2023. 12. 06. 전수진     대쉬보드를 위한 필독공지 추가         -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+<mapper namespace="kr.or.ddit.groupware.board.notice.dao.NoticeBoardDAO">
+	<!-- 공지사항 등록 -->
+	<insert id="insertNoticeBoard" parameterType="BoardVO">
+		<selectKey resultType="int" order="BEFORE" keyProperty="bbsNo">
+			SELECT BOARDNO_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+			INSERT INTO BBS (
+			    BBS_NO				/* 게시판번호 */
+			    , BBS_SJ			/* 게시판제목 */
+			    , BBS_CN			/* 게시판내용 */
+			    , BBS_RGSDE			/* 등록일자 */
+			    , EMP_CD			/* 작성자 */
+			    , NOICE_MUST_READ	/* 필독여부 */
+			    , NOTICE_TMLMT		/* 마감일자 */
+			    , BBS_CATEGORY		/* 게시판유형 */
+			) VALUES (
+				#{bbsNo,jdbcType=NUMERIC}
+				, #{bbsSj,jdbcType=VARCHAR}
+				, #{bbsCn,jdbcType=VARCHAR}
+				, SYSDATE
+				, #{empCd,jdbcType=VARCHAR}
+				, #{noiceMustRead,jdbcType=VARCHAR}
+				, #{noticeTmlmt,jdbcType=VARCHAR}
+				, #{bbsCategory,jdbcType=VARCHAR} 
+			)
+	</insert>
+
+	<!-- 공지사항 상세조회 -->
+	<resultMap type="BoardVO" id="boardMap" autoMapping="true">
+		<id property="bbsNo" column="BBS_NO"/>
+		<result property="bbsNo" column="BBS_NO"/>
+		<collection property="boardFileList" ofType="BoardFileVO" autoMapping="true" />
+	</resultMap>
+	<select id="selectNoticeBoard" parameterType="int" resultMap="boardMap">
+		SELECT
+		    A.BBS_NO			/* 게시판번호 */
+		    , A.BBS_SJ			/* 게시판제목 */
+		    , A.BBS_CN			/* 게시판내용 */
+		    , TO_CHAR(A.BBS_RGSDE, 'YYYY-MM-DD') AS BBS_RDATE		/* 등록일자 */
+		    , A.EMP_CD			/* 작성자 */
+		    , A.BBS_RDCNT		/* 조회수 */
+		    , A.NOICE_MUST_READ	/* 필독여부 */
+		    , A.NOTICE_TMLMT	/* 공지마감일자 */
+		    , A.BBS_CATEGORY	/* 게시판유형 */
+            , B.FILE_CODE		/* 첨부파일코드 */
+            , B.BBS_NO			/* 게시판번호 */
+            , B.FILE_NAME		/* 파일이름 */
+            , B.FILE_SAVENAME	/* 파일저장이름 */
+            , B.FILE_MIME		/* 파일타입 */
+            , B.FILE_SIZE		/* 파일크기 */
+            , B.FILE_FANCYSIZE	/* 파일팬시크기 */
+            , B.FILE_DOWNLOAD	/* 파일다운로드수 */
+		FROM
+		    BBS A LEFT OUTER JOIN BBS_FILE B ON(A.BBS_NO = B.BBS_NO)
+		WHERE
+		    A.BBS_CATEGORY='N' AND A.BBS_NO=#{bbsNo}
+	</select>
+	
+	<!-- 조회수 증가 -->
+	<update id="incrementHit" parameterType="int">
+		UPDATE BBS 
+		SET BBS_RDCNT = BBS_RDCNT + 1
+		WHERE
+			BBS_NO = #{bbsNo}
+	</update>
+
+	<!-- 페이징을 위한 총 레코드 수 조회 -->
+	<select id="selectTotalRecord" parameterType="PaginationInfo" resultType="int">
+		SELECT COUNT(*) 
+		FROM BBS 
+		WHERE 
+			BBS_CATEGORY='N'
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+				AND	INSTR(BBS_SJ, #{simpleCondition.searchWord}) > 0
+			</if>	
+	</select>
+
+	<!-- 페이징을 위한 공지사항 리스트 조회 -->
+	<select id="selectNoticeBoardList" parameterType="PaginationInfo" resultType="BoardVO">
+		SELECT BOARDVIEW.* 
+		FROM (SELECT A.*, ROWNUM RNUM
+		    FROM(
+		        SELECT
+		            BBS_NO				/* 게시판번호 */
+		            , BBS_SJ			/* 게시판제목 */
+		            , BBS_CN			/* 게시판내용 */
+		            , TO_CHAR(BBS_RGSDE, 'YYYY-MM-DD') AS BBS_RDATE
+		            , EMP_CD			/* 작성자 */
+		            , BBS_RDCNT			/* 조회수 */
+		            , NOICE_MUST_READ	/* 필독여부 */
+		            , NOTICE_TMLMT		/* 마감일자 */
+		            , BBS_CATEGORY		/* 게시판 카테고리 */
+		        FROM
+		            BBS
+		        WHERE
+		            BBS_CATEGORY='N' AND NOICE_MUST_READ = 'Y' AND (NOTICE_TMLMT IS NULL OR NOTICE_TMLMT >= TRUNC(SYSDATE))
+		        ORDER BY BBS_RGSDE DESC 
+		    ) A ) BOARDVIEW
+		<![CDATA[    
+		WHERE RNUM >= 1 AND RNUM <= 3 
+		]]>
+		UNION ALL
+		SELECT BOARDVIEW1.* 
+		FROM ( SELECT A.*, ROWNUM RNUM
+		    FROM(
+		        SELECT
+		            BBS_NO				/* 게시판번호 */
+		            , BBS_SJ			/* 게시판제목 */
+		            , BBS_CN			/* 게시판내용 */
+		            , TO_CHAR(BBS_RGSDE, 'YYYY-MM-DD') AS BBS_RDATE
+		            , EMP_CD			/* 작성자 */
+		            , BBS_RDCNT			/* 조회수 */
+		            , NOICE_MUST_READ	/* 필독여부 */
+		            , NOTICE_TMLMT		/* 마감일자 */
+		            , BBS_CATEGORY		/* 게시판 카테고리 */
+		        FROM
+		            BBS
+		        WHERE
+		            BBS_CATEGORY='N' AND (NOTICE_TMLMT IS NULL OR NOTICE_TMLMT >= TRUNC(SYSDATE))
+		        <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+					AND	INSTR(BBS_SJ, #{simpleCondition.searchWord}) > 0
+				</if>	
+		        ORDER BY BBS_RGSDE DESC -- 최근 등록일자 기준으로 정렬
+		    ) A)  BOARDVIEW1
+		<![CDATA[ 
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]> 
+	</select>
+	
+	<!-- 공지사항 수정 -->
+	<update id="updateNoticeBoard" parameterType="BoardVO">
+		UPDATE BBS
+		SET 
+			BBS_SJ = #{bbsSj,jdbcType=VARCHAR}						/* 게시판제목 */
+		    , BBS_CN = #{bbsCn,jdbcType=VARCHAR}					/* 게시판내용 */
+		    , NOICE_MUST_READ = #{noiceMustRead,jdbcType=VARCHAR}	/* 필독여부 */
+		    , NOTICE_TMLMT =#{noticeTmlmt,jdbcType=VARCHAR}			/* 공지마감일자 */
+		WHERE
+			BBS_NO = #{bbsNo}
+	</update>
+	
+	<!-- 공지사항 삭제 -->
+	<delete id="deleteNoticeBoard" parameterType="int">
+		DELETE FROM BBS
+		WHERE
+			BBS_NO = #{bbsNo}		/* 게시판번호 */
+	</delete>
+	
+	
+	<select id="selectNoticeForDashBoard" resultType="BoardVO">
+		SELECT BOARDVIEW.* 
+		FROM (SELECT A.*, ROWNUM RNUM
+		    FROM(
+		        SELECT
+		            BBS_NO				/* 게시판번호 */
+		            , BBS_SJ			/* 게시판제목 */
+		            , BBS_CN			/* 게시판내용 */
+		            , TO_CHAR(BBS_RGSDE, 'YYYY-MM-DD') AS BBS_RDATE
+		            , EMP_CD			/* 작성자 */
+		            , BBS_RDCNT			/* 조회수 */
+		            , NOICE_MUST_READ	/* 필독여부 */
+		            , NOTICE_TMLMT		/* 마감일자 */
+		            , BBS_CATEGORY		/* 게시판 카테고리 */
+		        FROM
+		            BBS
+		        WHERE
+		            BBS_CATEGORY='N' AND NOICE_MUST_READ = 'Y' AND (NOTICE_TMLMT IS NULL OR NOTICE_TMLMT >= TRUNC(SYSDATE))
+		        ORDER BY BBS_RGSDE DESC 
+		    ) A ) BOARDVIEW
+		<![CDATA[    
+		WHERE RNUM >= 1 AND RNUM <= 3 
+		]]>
+	</select>
+
+</mapper>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+       "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+       "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+
+	
+	<definition name="job/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/pms/job/{1}.jsp"  />
+	</definition>
+	
+	<definition name="dashBoard/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/groupware/dashBoard/{1}.jsp"  />
+	</definition>
+	
+	<definition name="account/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/admin/account/{1}.jsp"  />
+	</definition>
+	
+	<definition name="analysis/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/admin/analysis/{1}.jsp"  />
+	</definition>
+	
+	<definition name="issue/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/pms/issue/{1}.jsp"  />
+	</definition>
+	
+	<definition name="event/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/groupware/board/event/{1}.jsp"  />
+	</definition>
+	
+</tiles-definitions>       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.groupware.attendance.dao.AttendanceDAO">
+
+	<resultMap type="AttendanceVO" id="aMap" autoMapping="true">
+		<id property="attDate" column="ATT_DATE"/>
+		<id property="empCd" column="EMP_CD"/>
+		<collection property="alList" ofType="AttendanceLogVO" autoMapping="true"/>
+	</resultMap>
+
+	<select id="attendanceList" resultType="Map">
+		SELECT EMP_CD,V_SDAY
+		FROM VACATION
+		WHERE V_FLAG='H'
+	</select>
+	
+	<select id="attendanceDateList" resultType="AttendanceVO">
+		SELECT DISTINCT ATT_DATE
+		FROM ATTENDANCE
+		ORDER BY ATT_DATE
+	</select>
+	
+	<update id="updateAttendance" parameterType="AttendanceVO">
+		UPDATE ATTENDANCE
+		SET END_TIME =#{endTime}
+		WHERE EMP_CD = #{empCd} AND ATT_DATE= #{attDate}
+	</update>
+	
+	<update id="updateAttStime" parameterType="Map">
+		UPDATE ATTENDANCE
+		SET START_TIME=START_TIME+40000
+		WHERE ATT_DATE=#{V_SDAY} AND EMP_CD=#{EMP_CD}
+	</update>
+		
+	<insert id="insertPaidAnnual" parameterType="Map">
+		INSERT INTO PAID_ANNUAL(PV_YEAR, EMP_CD, ANNUAL_YEAR)
+		VALUES(#{PV_YEAR},#{EMP_CD},#{ANNUAL_YEAR})
+	</insert>
+	
+	<insert id="insertAwardAnnual" parameterType="Map">
+		<selectKey keyColumn="ANN_NO" keyProperty="ANN_NO" resultType="String" order="BEFORE">
+			SELECT AWARD_ANNUAL_SEQ.NEXTVAL FROM DUAL
+		</selectKey>
+		INSERT INTO AWARD_ANNUAL(ANN_NO, EMP_CD, AA_GDAY)
+		VALUES(#{ANN_NO},#{EMP_CD},#{AA_GDAY})
+	</insert>
+	
+	<insert id="insertVacation" parameterType="Map">
+		INSERT INTO VACATION(V_SDAY, EMP_CD, V_FLAG, V_WHY, V_EDAY)
+		VALUES(#{V_SDAY},#{EMP_CD},#{V_FLAG},#{V_WHY},#{V_EDAY})
+	</insert>
+	
+	<delete id="deleteAttDate" parameterType="Map">
+		DELETE FROM ATTENDANCE WHERE ATT_DATE=#{V_SDAY} AND EMP_CD=#{EMP_CD}
+	</delete>
+	
+	<update id="attendanceInsert" parameterType="AttendanceLogVO" useGeneratedKeys="true">
+		MERGE INTO ATTENDANCE_LOG
+		USING DUAL
+		ON (ATT_LOG_TIME LIKE TO_CHAR(SYSDATE,'HH24MI')||'%' AND EMP_CD=#{empCd})
+		WHEN MATCHED THEN 
+		    UPDATE SET ATT_LOG=#{attLog}
+		    WHERE ATT_LOG_TIME LIKE TO_CHAR(SYSDATE,'HH24MI')||'%' AND EMP_CD=#{empCd}
+		WHEN NOT MATCHED THEN
+		   	<selectKey keyColumn="ATT_LOG_TIME,ATT_DATE" keyProperty="attLogTime,attDate" resultType="hashmap" order="BEFORE">
+			SELECT TO_CHAR(SYSDATE,'HH24MISS') ATT_LOG_TIME, TO_CHAR(SYSDATE,'YYYYMMDD') ATT_DATE FROM DUAL
+			</selectKey>
+			INSERT (
+			    ATT_LOG,
+			    ATT_LOG_TIME,
+			    ATT_DATE,
+			    EMP_CD
+			) VALUES (
+			    #{attLog},
+			    #{attLogTime},
+			    #{attDate},
+			    #{empCd}
+			)
+	</update>
+	
+	<!-- <insert id="attendanceInsert" parameterType="AttendanceLogVO" useGeneratedKeys="true">
+		<selectKey keyColumn="ATT_LOG_TIME,ATT_DATE" keyProperty="attLogTime,attDate" resultType="hashmap" order="BEFORE">
+			SELECT TO_CHAR(SYSDATE,'HH24MISS') ATT_LOG_TIME, TO_CHAR(SYSDATE,'YYYYMMDD') ATT_DATE FROM DUAL
+		</selectKey>
+		INSERT INTO ATTENDANCE_LOG (
+		    ATT_LOG,
+		    ATT_LOG_TIME,
+		    ATT_DATE,
+		    EMP_CD
+		) VALUES (
+		    #{attLog},
+		    #{attLogTime},
+		    #{attDate},
+		    #{empCd}
+		)
+	</insert> -->
+	
+	<select id="selectAttendance" resultType="AttendanceVO" parameterType="AttendanceVO">
+		SELECT ATT_DATE
+			, EMP_CD
+			, START_TIME
+			, END_TIME
+			, sTime
+		FROM
+			(SELECT ATT_DATE
+			, EMP_CD
+			, START_TIME
+			, END_TIME
+			, SUBSTR(START_TIME,0,2)||':'||SUBSTR(START_TIME,3,2) sTime
+			FROM ATTENDANCE
+			WHERE EMP_CD=#{empCd}
+			<![CDATA[
+				AND ATT_DATE+1||'04'>TO_CHAR(SYSDATE,'YYYYMMDDHH24')
+			]]>
+			ORDER BY ATT_DATE DESC)
+		WHERE ROWNUM=1
+	</select>
+	
+	<select id="attendanceLogList" resultType="AttendanceLogVO" parameterType="AttendanceLogVO">
+		SELECT ATT_LOG, ATT_LOG_TIME, ATT_DATE, EMP_CD, SUBSTR(ATT_LOG_TIME,0,2)||':'||SUBSTR(ATT_LOG_TIME,3,2) lTime
+		FROM ATTENDANCE_LOG
+		WHERE EMP_CD=#{empCd}
+		<![CDATA[
+			AND ATT_DATE+1||'04'>TO_CHAR(SYSDATE,'YYYYMMDDHH24') AND ATT_DATE||'04'<TO_CHAR(SYSDATE,'YYYYMMDDHH24') AND SUBSTR(ATT_DATE,7)||SUBSTR(ATT_LOG_TIME,0,2)>SUBSTR(ATT_DATE,7)||'04'
+		]]>
+		ORDER BY ATT_LOG_TIME ASC
+	</select>
+	
+	<update id="commute" parameterType="AttendanceVO">
+		MERGE INTO ATTENDANCE
+		USING DUAL
+		<![CDATA[
+		ON (ATT_DATE+1||'04'>TO_CHAR(SYSDATE,'YYYYMMDDHH24') AND EMP_CD=#{empCd})
+		]]>
+		WHEN MATCHED THEN 
+		    UPDATE SET END_TIME=TO_CHAR(SYSDATE,'HH24MISS')
+		    WHERE ATT_DATE=TO_CHAR(SYSDATE,'YYYYMMDD') AND EMP_CD=#{empCd}
+		WHEN NOT MATCHED THEN
+		    INSERT (ATT_DATE,EMP_CD,START_TIME)
+		    VALUES(TO_CHAR(SYSDATE,'YYYYMMDD'),#{empCd},TO_CHAR(SYSDATE,'HH24MISS'))
+	</update>
+	
+	<select id="attendanceWeek" parameterType="AttendanceVO">
+		SELECT ATT_DATE, EMP_CD, START_TIME, END_TIME
+        FROM ATTENDANCE
+		<![CDATA[
+        WHERE #{startOfWeek}<=ATT_DATE AND ATT_DATE<=#{endOfWeek}
+        ]]>
+       	AND END_TIME IS NOT NULL AND EMP_CD=#{empCd}
+	</select>
+	
+	<select id="attendanceWeekly" parameterType="AttendanceVO">
+		SELECT ATT_DATE, EMP_CD, START_TIME, END_TIME
+        FROM ATTENDANCE
+		<![CDATA[
+        WHERE #{startOfWeek}<=ATT_DATE AND ATT_DATE<=#{endOfWeek}
+        ]]>
+        AND EMP_CD=#{empCd}
+	</select>
+	
+	<select id="selectYearAnnual" parameterType="String" resultType="int">
+		SELECT ANNUAL_YEAR
+		FROM PAID_ANNUAL
+		WHERE EMP_CD=#{empCd}
+			AND PV_YEAR=TO_CHAR(SYSDATE,'YYYY')
+	</select>
+	
+	<select id="selectAwardAnnual" parameterType="String" resultType="int">
+		SELECT COUNT(ANN_NO)
+		FROM AWARD_ANNUAL
+		WHERE EMP_CD=#{empCd}
+			AND SUBSTR(AA_GDAY,0,4) = TO_CHAR(SYSDATE,'YYYY')
+	</select>
+	
+	<select id="selectHalfAnnual" parameterType="String" resultType="int">
+		SELECT COUNT(V_SDAY)
+		FROM VACATION
+		WHERE EMP_CD=#{empCd}
+			AND V_FLAG='H'
+	</select>
+	
+	<select id="selectUseAnnaul" parameterType="String" resultType="int">
+		SELECT V_EDAY-V_SDAY
+		FROM VACATION
+		WHERE EMP_CD=#{empCd}
+			AND V_FLAG='N'
+	</select>
+	
+	<select id="annualList" parameterType="String" resultType="AnnualVO">
+		SELECT
+			FN_GET_DEPT_NAME(EMP_CD) dept_name,
+			FN_GET_EMP_RANK_NM(EMP_CD) rank_nm,
+			FN_GET_EMP_NAME(EMP_CD) emp_name
+		FROM VACATION
+		<![CDATA[
+		WHERE V_SDAY<=#{formattedToday} AND #{formattedToday}<V_EDAY
+        ]]>
+	</select>
+	
+	<select id="annualLeaveUsageRateByRank" resultType="Map">
+		SELECT COMMON_CODE_SJ, COMMON_CODE_CD, TO_CHAR((ROUND(CALCULATED_COL / ANNUAL_YEAR, 2))*100) USEVAC
+		FROM (
+		    SELECT 
+		        COMMON_CODE_SJ,
+		        COMMON_CODE_CD,
+		        TO_CHAR(
+		            NVL(SUM(V_EDAY - V_SDAY), 0) + (COUNT(V_SDAY) - COUNT(V_EDAY)) * 0.5
+		        ) AS CALCULATED_COL,
+		        SUM(ANNUAL_YEAR) AS ANNUAL_YEAR
+		    FROM COMMON_CODE C 
+		    LEFT OUTER JOIN EMPLOYEE E ON E.EMP_RANK = C.COMMON_CODE_CD
+		    LEFT OUTER JOIN VACATION V ON E.EMP_CD = V.EMP_CD
+		    LEFT OUTER JOIN PAID_ANNUAL P ON E.EMP_CD = P.EMP_CD
+		    WHERE V_FLAG = 'N' OR E.EMP_RANK IS NOT NULL AND COMMON_CODE_CD != 'RANK_00'
+		    GROUP BY COMMON_CODE_SJ, COMMON_CODE_CD
+		) A
+		ORDER BY COMMON_CODE_CD
+	</select>
+</mapper>
+
+
+
+
+

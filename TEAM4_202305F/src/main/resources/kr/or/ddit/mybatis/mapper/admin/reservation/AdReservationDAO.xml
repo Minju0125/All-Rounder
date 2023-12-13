@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.admin.reservation.reservation.dao.AdReservationDAO">
+	
+	<resultMap type="VehicleReservationVO" id="vehicleReservationMap" autoMapping="true">
+	    <id property="vhcleReserveCd" column="VHCLE_RESERVE_CD"/>
+	    <association property="vhcle" javaType="VehicleVO" autoMapping="true"/>
+	</resultMap>
+	
+	<resultMap type="ConfRoomReservationVO" id="confRoomReservationMap" autoMapping="true">
+		<id property="confReserveCd" column="CONF_RESERVE_CD"/>
+		<association property="confRoom" javaType="ConfRoomVO" autoMapping="true"/>
+	</resultMap>
+	
+	<!-- 모든 차량예약 내역과 해당 차량, 예약자 정보 조회 쿼리 -->
+	<select id="selectReservationListVhcle" resultMap="vehicleReservationMap">
+		SELECT
+		    VR.VHCLE_RESERVE_CD, /* 차량 예약 코드*/
+		    VR.VHCLE_RESERVE_EMP_CD, /* 예약자사번 */
+		    VR.VHCLE_RESERVE_PW, /* 취소용비밀번호 */
+		    VR.VHCLE_RESERVE_PUR, /* 목적 */
+		    VR.VHCLE_USE_TIME_CD, /* 사용시간 */
+		    VR.VHCLE_USE_DATE, /* 사용날짜 */
+		    VR.VHCLE_CD, /* 차량코드 */
+		    V.VHCLE_NO , /* 차량번호 */
+		    V.VHCLE_MODEL /* 차량모델 */,
+		    FN_GET_EMP_NAME(VR.VHCLE_RESERVE_EMP_CD) "vhcleReserveEmpNm", /* 예약자명 */
+		    FN_GET_DEPT_NAME(VR.VHCLE_RESERVE_EMP_CD) "vhcleReserveEmpDeptNm", /* 예약자 부서명 */
+		    FN_GET_EMP_RANK_NM(VR.VHCLE_RESERVE_EMP_CD) "vhcleReserveEmpRankNm" /* 예약자 직급명 */
+		FROM
+		    VEHICLE_RESERVATION VR
+		    LEFT OUTER JOIN VEHICLE V ON V.VHCLE_CD = VR.VHCLE_CD
+		    ORDER BY TO_DATE(vr.vhcle_use_date, 'YYYY-MM-DD') DESC
+	</select>
+	
+	<!-- 차량의 작년 예약내역 -->
+	<select id="selectVLastReservationHistory" resultType="VehicleReservationVO">
+		SELECT 
+		    VHCLE_RESERVE_CD
+		    , VHCLE_USE_DATE
+		FROM VEHICLE_RESERVATION
+		WHERE VHCLE_USE_DATE BETWEEN TO_DATE(TO_CHAR(SYSDATE, 'YYYY') - 1 || '-01-01', 'YYYY-MM-DD')
+		                          AND TO_DATE(TO_CHAR(SYSDATE, 'YYYY') - 1 || '-12-31', 'YYYY-MM-DD')
+	</select>
+	
+	<!-- 차량의 올해 예약내역 -->
+	<select id="selectVThisReservationHistory" resultType="VehicleReservationVO">
+		SELECT 
+		    VHCLE_RESERVE_CD
+		    , VHCLE_USE_DATE
+		FROM VEHICLE_RESERVATION
+		WHERE VHCLE_USE_DATE BETWEEN TO_DATE(TO_CHAR(SYSDATE, 'YYYY') || '-01-01', 'YYYY-MM-DD')
+		                        AND TO_DATE(TO_CHAR(SYSDATE, 'YYYY') || '-12-31', 'YYYY-MM-DD')
+	</select>
+	
+	<!-- 회의실의 작년 예약내역 -->
+	<select id="selectCLastReservationHistory" resultType="ConfRoomReservationVO">
+		SELECT 
+	    CONF_RESERVE_CD
+		    , CONF_DATE
+		FROM CONF_ROOM_RESERVATION
+		WHERE CONF_DATE BETWEEN TO_DATE(TO_CHAR(SYSDATE, 'YYYY') - 1 || '-01-01', 'YYYY-MM-DD')
+		                          AND TO_DATE(TO_CHAR(SYSDATE, 'YYYY') - 1 || '-12-31', 'YYYY-MM-DD')
+	</select>
+	
+	<!-- 회의실의 올해 예약내역 -->
+	<select id="selectCThisReservationHistory" resultType="ConfRoomReservationVO">
+		SELECT 
+	    CONF_RESERVE_CD
+		    , CONF_DATE
+		FROM CONF_ROOM_RESERVATION
+		WHERE CONF_DATE BETWEEN TO_DATE(TO_CHAR(SYSDATE, 'YYYY') || '-01-01', 'YYYY-MM-DD')
+		                        AND TO_DATE(TO_CHAR(SYSDATE, 'YYYY') || '-12-31', 'YYYY-MM-DD')
+	</select>
+	
+	<!-- 모든 회의실 예약 내역과 회의실, 예약자 정보 조회 쿼리 -->
+	<select id="selectReservationListConf" resultMap="confRoomReservationMap">
+		SELECT
+		    CR.CONF_RESERVE_CD, /* 회의실예약 코드 */
+		    CR.CONF_RESERVE_EMP_CD, /* 예약자사번 */
+		    CR.CONF_RESERVE_PW, /* 취소용 비밀번호 */
+		    CR.CONF_ROOM_CD, /* 회의실 코드 */
+		    CR.CONF_TIME_CD, /* 사용시간 */
+		    CR.CONF_DATE, /* 사용날짜 */ 
+		    C.CONF_ROOM_NM, /* 회의실 이름 */
+		    FN_GET_EMP_NAME(CR.CONF_RESERVE_EMP_CD) "confReserveEmpNm", /* 예약자명 */
+		    FN_GET_DEPT_NAME(CR.CONF_RESERVE_EMP_CD) "confReserveEmpDeptNm", /* 예약자 부서명 */
+		    FN_GET_EMP_RANK_NM(CR.CONF_RESERVE_EMP_CD) "confReserveEmpRankNm" /* 예약자 직급명 */
+		FROM
+		    CONF_ROOM_RESERVATION CR
+		    LEFT OUTER JOIN CONF_ROOM C ON CR.CONF_ROOM_CD = C.CONF_ROOM_CD
+		    ORDER BY TO_DATE(CR.CONF_DATE, 'YYYY-MM-DD') DESC
+	</select>
+	
+	<delete id="deleteConfReservation" parameterType="String">
+		DELETE FROM CONF_ROOM_RESERVATION WHERE CONF_RESERVE_CD = #{confReserveCd}
+	</delete>
+</mapper>

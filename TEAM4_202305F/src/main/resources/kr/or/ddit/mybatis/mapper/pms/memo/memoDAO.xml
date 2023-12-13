@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.pms.memo.dao.MemoDAO">
+
+	<!-- 기준 번호, zindex -->
+	<select id="selectMaxNo" resultType="int">
+		SELECT MAX(MEMO_NO)+1 MEMO_NO
+		FROM MEMO  
+	</select>
+	<select id="selectMaxZindex" resultType="int">
+		SELECT MAX(MEMO_ZINDEX)+1 MEMO_ZINDEX
+		FROM MEMO 
+	</select>
+
+	<!-- 해당 직원 메모 리스트 전체 조회 -->
+	<select id="selectListMemo" parameterType="String" resultType="MemoVO">
+		SELECT
+		    MEMO_NO, MEMO_CN, MEMO_RGSDE, MEMO_BKMK_YN
+		    , MEMO_WIDTH, MEMO_HEIGHT, MEMO_X, MEMO_Y
+		    , EMP_CD, MEMO_BG, MEMO_ZINDEX
+		FROM
+		    MEMO
+		WHERE
+		    EMP_CD = #{empCd}
+		ORDER BY MEMO_RGSDE DESC  
+	</select>
+	
+	<!-- 메모 추가 -->
+	<insert id="insertMemo" parameterType="MemoVO">
+	    <selectKey resultType="int" keyProperty="memoNo" order="BEFORE">
+	        SELECT MAX(MEMO_NO)+1 MEMO_NO
+			FROM MEMO        
+	    </selectKey> 
+	    INSERT INTO MEMO (
+		    MEMO_NO, MEMO_CN, MEMO_RGSDE, MEMO_BKMK_YN
+		    , MEMO_WIDTH, MEMO_HEIGHT, MEMO_X, MEMO_Y
+		    , EMP_CD, MEMO_BG, MEMO_ZINDEX
+		) VALUES (
+		    #{memoNo},
+		    #{memoCn},
+		    SYSDATE,
+		    #{memoBkmkYn},
+		    #{memoWidth},
+		    #{memoHeight},
+		    #{memoX},
+		    #{memoY},
+		    #{empCd},
+		    #{memoBg},
+		    <if test="memoZindex eq null">
+		    0
+		    </if>	    
+		    <if test="memoZindex neq null">
+		    	#{memoZindex}	
+		    </if>    
+		    
+		)
+	</insert>
+	
+	<!-- 메모 수정 -->
+	<update id="updateMemo" parameterType="MemoVO">
+		UPDATE MEMO
+		SET
+		    MEMO_CN = #{memoCn}
+		    , MEMO_RGSDE = SYSDATE
+		    , MEMO_X = #{memoX}
+		    , MEMO_BKMK_YN = #{memoBkmkYn}
+		    , MEMO_Y = #{memoY}
+		    , MEMO_ZINDEX = #{memoZindex}
+		WHERE
+	        MEMO_NO = #{memoNo}
+	</update>
+	
+	<!-- 메모 하나 삭제 -->
+	<delete id="deleteMemo" parameterType="int">
+		DELETE FROM MEMO
+		WHERE
+        MEMO_NO = #{memoNo} 
+	</delete>
+	
+	<!-- 메모 전체 삭제 -->
+	<delete id="deleteAll" parameterType="String">
+		DELETE FROM memo
+		WHERE
+        emp_cd = #{empCd}
+	</delete>
+</mapper>

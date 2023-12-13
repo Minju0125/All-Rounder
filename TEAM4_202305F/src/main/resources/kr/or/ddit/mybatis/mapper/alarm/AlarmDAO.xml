@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 12. 1.  전수진     최초작성               -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+<mapper namespace="kr.or.ddit.alarm.dao.AlarmDAO">
+
+	<!-- 알림등록  -->
+	<insert id="insertAlarm" parameterType="AlarmVO">
+	    INSERT INTO ALARM (
+		    ALARM_NO 			/* 알림번호 */
+		    , ALARM_SENDER 		/* 발신자 */
+		    , ALARM_RECEIVER  	/* 수신자 */
+		    , ALARM_SOURCE 		/* 발신지 */
+		    , ALARM_CONTENT 	/* 내용 */
+		    , ALARM_DATE 		/* 알림날짜 */
+		    , ALARM_READ 		/* 읽음여부 Y(읽음),N(안읽음) */
+		    , ALARM_TYPE 		/* 알림타입 */
+		    , ALARM_URL			/* 이동URL */
+		) VALUES (
+		    ALARMNO_SEQ.NEXTVAL
+		    , #{alarmSender}
+		    , #{alarmReceiver}
+		    , #{alarmSource}
+		    , #{alarmContent}
+		    , #{alarmDate}
+		    , #{alarmRead}
+		    , #{alarmType}
+		    , #{alarmUrl}
+		)
+	</insert>
+	
+	
+	<!-- 로그인한 직원의 알림list 출력 -->
+	<select id="selectAlarmList" parameterType="String" resultType="AlarmVO">
+		SELECT
+		    ALARM_NO 			/* 알림번호 */
+		    , ALARM_SENDER 		/* 발신자 */
+		    , ALARM_RECEIVER  	/* 수신자 */
+		    , ALARM_SOURCE 		/* 발신지 */
+		    , ALARM_CONTENT 	/* 내용 */
+		    , ALARM_DATE 		/* 알림날짜 */
+		    , ALARM_READ 		/* 읽음여부 Y(읽음),N(안읽음) */
+		    , ALARM_TYPE 		/* 알림타입 */
+		    , ALARM_URL			/* 이동URL */
+		FROM
+		    ALARM
+		WHERE
+		    ALARM_RECEIVER = #{alarmReceiver}
+		ORDER BY ALARM_DATE DESC
+	</select>
+	
+	
+	<!-- 읽지않은 알림의 갯수 -->
+	<select id="countAlarmList" resultType="int" parameterType="String">
+		SELECT COUNT(*)
+		FROM
+		    ALARM
+		WHERE
+		    ALARM_RECEIVER = #{alarmReceiver} AND ALARM_READ = 'Y'
+	</select>
+	
+	
+	<!-- 알림 읽음 표시여부 수정 -->
+	<update id="updateAlarm" parameterType="String">
+		UPDATE ALARM
+		SET
+		    AND ALARM_READ = 'Y'
+		WHERE
+		    AND ALARM_RECEIVER = #{alarmReceiver}
+	</update>
+	
+	
+	<!-- 알림 1건 지우기 -->
+	<delete id="deleteAlarm" parameterType="int">
+		DELETE FROM ALARM
+		WHERE
+			ALARM_NO = #{alarmNo} 
+	</delete>
+		
+		
+	<!-- 모든 알림 지우기 -->
+	<delete id="deleteAllAlarm" parameterType="String">
+		DELETE FROM ALARM
+		WHERE
+			ALARM_RECEIVER = #{alarmReceiver} AND ALARM_READ = 'Y' 
+	</delete>
+</mapper>

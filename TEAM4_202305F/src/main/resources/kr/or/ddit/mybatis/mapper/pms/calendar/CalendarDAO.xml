@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.cal.dao.CalDAO">
+	<resultMap type="CalendarVO" id="listCalMap" autoMapping="true">
+		<collection property="pjobList" autoMapping="true" ofType="PjobVO"></collection>
+	</resultMap>
+
+	<!-- 해당 직원 일정 조회 -->
+	<select id="selectList" parameterType="CalCheckVO" resultMap="listCalMap">
+		    SELECT
+		        S.SCHEDULE_CD,
+		        S.SCHEDULE_SJ,
+		        S.SCHEDULE_CN,
+		        S.SCHEDULE_BGN_DT,
+		        S.SCHEDULE_END_DT,
+		        S.SCHEDULE_PLACE,
+		        S.EMP_CD,
+		        S.SCHEDULE_ALARM_YN,
+		        S.SCHEDULE_BCOLOR,
+		        S.SCHEDULE_DAY_YN,
+		        S.JOB_SN,
+		        S.PRO_SN,
+		        S.SCHEDULE_FCOLOR,
+		        S.SCHEDULE_SHARER,
+		        FN_GET_DEPT_NAME(S.EMP_CD) AS DEPTNAME,
+		        P.EMP_CD AS PROJECTEMPCD,
+		        P.PRO_SN AS PROJECTSN,
+		        P.PRO_NM
+		    FROM
+		        SCHEDULE S
+		    LEFT JOIN
+		        (
+		            SELECT
+		                M.EMP_CD,
+		                P.PRO_SN,
+		                P.PRO_NM
+		            FROM
+		                PROJECT P
+		            INNER JOIN
+		                PMEMBER M ON P.PRO_SN = M.PRO_SN
+		            WHERE
+		                M.EMP_CD = #{empCd}
+		        ) P ON S.SCHEDULE_SHARER = P.PRO_SN
+		    WHERE
+		        (S.EMP_CD = #{empCd} OR SCHEDULE_SHARER = 'COMMON') 
+		        
+		        <trim prefix="AND (" prefixOverrides="OR" suffix=")">
+		            <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(C)">
+		                OR SCHEDULE_SHARER = 'COMMON'
+		            </if>
+		            <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(P)">
+		                OR SCHEDULE_SHARER IN
+		                <foreach item="pList" collection="pList" open="(" separator=", " close=")">
+		                    #{pList.proSn}
+		                </foreach>
+		            </if>
+		            <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(D)">
+		                OR SCHEDULE_SHARER = (SELECT DEPT_CD FROM EMPLOYEE WHERE EMP_CD=#{empCd})
+		            </if>
+		            <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(I)">
+		                OR SCHEDULE_SHARER = #{empCd}
+		            </if>
+				</trim>            
+	</select>
+	
+	<!-- 공통 코드 사용( 분류 ) -->
+	<select id="selectListType" resultType="CommonVO">
+		SELECT
+		    COMMON_CODE_CD,
+		    COMMON_CODE_UPPER_CD,
+		    COMMON_CODE_SJ,
+		    COMMON_CODE_ENGL_SJ,
+		    COMMON_CODE_USE_AT
+		FROM
+		    COMMON_CODE
+		WHERE     
+   			COMMON_CODE_UPPER_CD = 'CAL'    
+	</select>
+	
+	<!-- 해당 분류 선택 시 코드 (MAX +1) -->
+	<select id="selectType" parameterType="String" resultType="String">		
+		SELECT #{commonCodeCd} || '_' || TO_CHAR(SYSDATE, 'YYMMDD') || '_' || LPAD(SUBSTR(MAX(SCHEDULE_CD),10,3)+1, 3, '0') SCHEDULE_CD
+		FROM SCHEDULE
+		WHERE SUBSTR(SCHEDULE_CD,1,1)=#{commonCodeCd}
+	</select>
+	
+	<!-- 상세 일정 조회 -->
+	<select id="detailCal" parameterType="String" resultType="CalendarVO">
+		SELECT
+		    SCHEDULE_CD,
+		    SCHEDULE_SJ,
+		    SCHEDULE_CN,
+		    SCHEDULE_BGN_DT,
+		    SCHEDULE_END_DT,
+		    SCHEDULE_PLACE,
+		    EMP_CD,
+		    SCHEDULE_ALARM_YN,
+		    SCHEDULE_BCOLOR,
+		    SCHEDULE_DAY_YN,
+		    JOB_SN,
+		    PRO_SN,
+		    SCHEDULE_FCOLOR
+		FROM
+		    SCHEDULE
+		    WHERE
+		    SCHEDULE_CD = #{scheduleCd} 
+	</select>
+	
+	<!-- 일정 추가 -->
+	<insert id="insertCal" parameterType="CalendarVO">
+		INSERT INTO SCHEDULE (
+		    SCHEDULE_CD, SCHEDULE_SJ, SCHEDULE_CN
+		    , SCHEDULE_BGN_DT, SCHEDULE_END_DT, SCHEDULE_PLACE
+		    , EMP_CD, SCHEDULE_ALARM_YN, SCHEDULE_BCOLOR, SCHEDULE_FCOLOR
+		    , SCHEDULE_DAY_YN, JOB_SN, PRO_SN, SCHEDULE_SHARER
+		) VALUES (
+		    #{scheduleCd}
+		    , #{scheduleSj}
+		    , #{scheduleCn}
+		    , #{scheduleBgnDt}
+		    , #{scheduleEndDt}
+		    , #{schedulePlace}
+		    , #{empCd}
+		    , #{scheduleAlarmYn}
+			, <choose>
+			    <when test='searchCd == "C"'> '#f8fdb4' </when>
+			    <when test='searchCd == "D"'> '#c9c8f9' </when>
+			    <when test='searchCd == "I"'> '#ffccd1' </when>
+			    <when test='searchCd == "P"'> '#ccffd9' </when>
+			    <otherwise> 'BLACK' </otherwise>
+			</choose>
+		    , #{scheduleFcolor}
+		    , #{scheduleDayYn}
+		    , #{jobSn}
+		    , #{proSn} 
+		    , #{scheduleSharer}
+		 )
+	</insert>
+	
+	<!-- 일정 삭제 -->
+	<delete id="deleteCal" parameterType="String">
+		DELETE FROM SCHEDULE
+		WHERE
+	        SCHEDULE_CD = #{scheduleCd} 
+	</delete>
+	
+	<!-- 일정 수정 -->
+	<update id="updateCal" parameterType="CalendarVO">
+		UPDATE SCHEDULE 
+	    SET 
+	        SCHEDULE_SJ = #{scheduleSj}
+	        ,SCHEDULE_CN = #{scheduleCn}
+	        ,SCHEDULE_BGN_DT = #{scheduleBgnDt}
+	        ,SCHEDULE_END_DT = #{scheduleEndDt}
+	        ,SCHEDULE_PLACE = #{schedulePlace}
+	        ,EMP_CD = #{empCd}
+	        ,SCHEDULE_ALARM_YN = #{scheduleAlarmYn}
+	        ,SCHEDULE_BCOLOR =        
+	        <choose>
+	            <when test="scheduleCd != null and scheduleCd.startsWith('C')"> '#f8fdb4' </when>
+	            <when test="scheduleCd != null and scheduleCd.startsWith('D')"> '#c9c8f9' </when>
+	            <when test="scheduleCd != null and scheduleCd.startsWith('I')"> '#ffccd1' </when>
+	            <when test="scheduleCd != null and scheduleCd.startsWith('P')"> '#ccffd9' </when>
+	            <otherwise> 'BLACK' </otherwise>
+	        </choose>
+	        ,SCHEDULE_FCOLOR = #{scheduleFcolor}
+	        ,SCHEDULE_DAY_YN = #{scheduleDayYn}
+	        ,JOB_SN = #{jobSn}
+	        ,PRO_SN = #{proSn}
+	    WHERE
+	        SCHEDULE_CD = #{scheduleCd}
+	</update>
+		
+		
+	<select id="searchCal" parameterType="CalendarVO" resultType="CalendarVO">
+		SELECT 
+		    SCHEDULE_CD,
+		    SCHEDULE_SJ,
+		    SCHEDULE_CN,
+		    SCHEDULE_BGN_DT,
+		    SCHEDULE_END_DT,
+		    SCHEDULE_PLACE,
+		    EMP_CD,
+		    SCHEDULE_ALARM_YN,
+		    SCHEDULE_BCOLOR,
+		    SCHEDULE_FCOLOR,
+		    SCHEDULE_DAY_YN,
+		    JOB_SN,
+		    PRO_SN
+		FROM
+		    SCHEDULE
+		WHERE
+		<!-- 검색 조건들을 넣어준 collection ex:)List<String> searchCd -->
+		<foreach collection="searchCd" separator="OR" item="search">	
+			<choose>
+	            <when test="search != null and search=='C'"> SUBSTR(SCHEDULE_CD, 1, 1) = 'C' </when>
+	            <when test="search != null and search=='D'"> EMP_CD = #{empCd} AND SUBSTR(SCHEDULE_CD, 1, 1) = 'D' </when>
+	            <when test="search != null and search=='I'"> EMP_CD = #{empCd} AND SUBSTR(SCHEDULE_CD, 1, 1) = 'I'  </when>
+	            <when test="search != null and search=='P'"> EMP_CD = #{empCd} AND SUBSTR(SCHEDULE_CD, 1, 1) = 'P'  </when>
+	        </choose>
+	     </foreach>   
+    
+	</select>
+	
+	<resultMap type="ProjectVO" id="projectMap" autoMapping="true">
+		<id property="proSn" column="PRO_SN" />
+		<result property="proSn" column="PRO_SN" /> 
+		<association  property="emp"  javaType="EmployeeVO" autoMapping="true" >
+			<id property="empCd" column="EMP_CD"/>    
+		  </association> 
+		<collection property="pjobList"  ofType="PjobVO" autoMapping="true" >    
+			<id property="jobSn" column="JOB_SN"/>  
+		</collection> 
+		<collection property="pmemberList"  ofType="PmemberVO" autoMapping="true" />    
+		   
+	</resultMap>  
+   
+	<select id="selectProjectList" resultMap="projectMap" parameterType="ProjectVO"> 
+		SELECT
+		     M.EMP_CD,
+		    P.PRO_SN,
+		    P.PRO_NM 
+		FROM
+		    PROJECT P
+		INNER JOIN
+		    PMEMBER M
+		ON
+		    P.PRO_SN = M.PRO_SN
+		WHERE
+		    M.EMP_CD =  #{empCd} 
+	</select>
+	
+	<update id="dragUpdate" parameterType="CalendarVO">
+		UPDATE SCHEDULE 
+		SET
+		    SCHEDULE_BGN_DT = #{scheduleBgnDt},
+		    SCHEDULE_END_DT = #{scheduleEndDt}
+		WHERE
+	        SCHEDULE_CD = #{scheduleCd}
+	</update>
+</mapper>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC
+       "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN"
+       "http://tiles.apache.org/dtds/tiles-config_3_0.dtd">
+<tiles-definitions>
+
+	<definition name="abstractDef_oks" template="/WEB-INF/views/template_oks.jsp">
+		<put-attribute name="title" value="Company305" />
+		<put-attribute name="preScript" value="/includee/preScript.jsp"/>
+		<put-attribute name="cssScript_oks" value="/includee/cssScript_oks.jsp"/>
+		<put-attribute name="headerMenu" value="/includee/headerMenu.jsp" />
+		<put-attribute name="leftMenu" value="/includee/leftMenu.jsp" />
+		
+		<put-attribute name="footer" value="/includee/footer.jsp"/>
+		<put-attribute name="postScript" value="/includee/postScript.jsp"/>
+	</definition>
+	
+	<definition name="company/*" extends="abstractDef_oks">
+		<put-attribute name="content" value="/WEB-INF/views/groupware/company/{1}.jsp" />
+	</definition>
+	
+	<definition name="admin/orgadmin/*" extends="abstractDef_oks">
+		<put-attribute name="content" value="/WEB-INF/views/admin/orgadmin/{1}.jsp" />
+	</definition>
+		
+	<definition name="pms/calendar/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/pms/calendar/{1}.jsp" />
+	</definition>
+	
+	<definition name="admin/caladmin/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/admin/caladmin/{1}.jsp" />
+	</definition>
+	
+	<definition name="pms/memo/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/pms/memo/{1}.jsp" />
+	</definition>
+	
+	<definition name="groupware/board/freeboard/*" extends="abstractDef">
+		<put-attribute name="content" value="/WEB-INF/views/groupware/board/freeboard/{1}.jsp" />
+	</definition>
+	
+</tiles-definitions>       
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

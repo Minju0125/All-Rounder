@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.pms.issue.dao.IssueDAO">
+
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        	수정자     수정내용               -->
+<!--  ==========  		 ======    ==============        -->
+<!--  2023. 11. 23.      김보영     최초작성 ,이슈등록    -->
+<!--  2023. 11. 24.      김보영     조회    -->
+<!--  2023. 11. 24.      김보영     칸반보드(업데이트)    -->
+<!--  2023. 11. 29.      김보영     수정 ,삭제    -->
+<!--  2023. 11. 30.      김보영     이슈 차트    -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+
+	<!-- 이슈용 일감목록 -->
+	<select id="issueJobList" parameterType="String" resultType="PjobVO">
+		SELECT *
+		FROM PJOB
+		WHERE PRO_SN=#{proSn}
+	</select>
+	
+	<!-- 이슈 차트 -->
+	<select id="chartValue" parameterType="IssueVO" resultType="IssueVO">
+		SELECT decode(b.ISSUE_STTUS, 1, '진행', 2, '보류', 3, '완료') AS ISSUE_STTUS
+			, COUNT(CASE WHEN ISSUE_SE = 2 AND ISSUE_IMP = 1 THEN 1 ELSE NULL END) AS a   
+			, COUNT(CASE WHEN ISSUE_SE = 2 AND ISSUE_IMP = 2 THEN 1 ELSE NULL END) AS b                                    
+			, COUNT(CASE WHEN ISSUE_SE = 2 AND ISSUE_IMP = 3 THEN 1 ELSE NULL END) AS c                                    
+			, COUNT(CASE WHEN ISSUE_SE = 1 AND ISSUE_IMP = 1 THEN 1 ELSE NULL END) AS d                                   
+			, COUNT(CASE WHEN ISSUE_SE = 1 AND ISSUE_IMP = 2 THEN 1 ELSE NULL END) AS e                                  
+			, COUNT(CASE WHEN ISSUE_SE = 1 AND ISSUE_IMP = 3 THEN 1 ELSE NULL END) AS f                       
+		FROM (
+		    SELECT ISSUE_STTUS, ISSUE_SE, ISSUE_IMP, PRO_SN
+		    FROM ISSUE
+		    WHERE PRO_SN = #{proSn}
+		) a
+			RIGHT OUTER JOIN (
+				SELECT 1 AS ISSUE_STTUS FROM dual
+				UNION all
+				SELECT 2 AS ISSUE_STTUS FROM dual
+				UNION all
+				SELECT 3 AS ISSUE_STTUS FROM dual
+			) b
+				ON a.ISSUE_STTUS = b.ISSUE_STTUS
+		GROUP BY b.ISSUE_STTUS  
+	</select>
+	
+
+	<!-- 이슈삭제 -->
+	<delete id="deleteIssue" parameterType="IssueVO">
+		DELETE FROM ISSUE
+		WHERE ISSUE_NO=#{issueNo}
+		AND PRO_SN=#{proSn}
+	</delete>
+	
+	
+	<!-- 이슈수정 -->
+	<update id="updateIssueInfo" parameterType="IssueVO">
+		UPDATE ISSUE
+		SET 
+			ISSUE_RDATE= SYSDATE
+			, ISSUE_IMP=#{issueImp,jdbcType=VARCHAR}
+			, ISSUE_STTUS=#{issueSttus,jdbcType=VARCHAR}
+			, ISSUE_SE=#{issueSe,jdbcType=VARCHAR}
+			, ISSUE_SJ=#{issueSj,jdbcType=VARCHAR}
+			, ISSUE_CN=#{issueCn,jdbcType=VARCHAR}
+			, ISSUE_EDATE=#{issueEdate,jdbcType=VARCHAR}
+			, JOB_SN=#{jobSn,jdbcType=NUMERIC}
+		WHERE ISSUE_NO=#{issueNo}
+		AND PRO_SN=#{proSn}
+	</update>
+
+	<!-- 이슈에 참조되어있는 일감번호 -->
+	<select id="selectJobSn" parameterType="int" resultType="IssueVO">
+		SELECT
+			JOB_SN
+		FROM ISSUE
+		WHERE ISSUE_NO = #{issueNo}
+	</select>	
+	
+	
+	<!-- 한개이슈조회 -->
+	<select id="selectIssue" parameterType="int" resultType="IssueVO">
+		SELECT 
+			I.ISSUE_NO
+			, I.PRO_SN
+			, TO_CHAR(TO_DATE(I.ISSUE_RDATE),'YYYY-MM-DD') AS issueRdate
+			, I.ISSUE_IMP
+			, I.ISSUE_STTUS
+			, I.ISSUE_SE
+			, I.ISSUE_SJ
+			, I.ISSUE_CN
+			, I.EMP_CD
+			, GET_EMP_NAME(I.EMP_CD) AS writer
+			, I.JOB_SN
+			,
+			(
+				SELECT 
+					J.JOB_SJ
+				FROM PJOB J
+				WHERE I.JOB_SN = J.JOB_SN
+			) AS refJobName
+			, TO_CHAR(TO_DATE(I.ISSUE_EDATE),'YYYY-MM-DD') AS issueEdate
+			,(
+				SELECT 
+					J.JOB_SJ
+				FROM PJOB J
+				WHERE I.JOB_SN = J.JOB_SN
+			)AS refJobName
+		FROM ISSUE I
+		WHERE I.ISSUE_NO = #{issueNo} 
+	</select>
+	
+	
+	
+	
+	
+	
+	<!-- 이슈등록 -->
+	<insert id="insertIssue" parameterType="IssueVO">
+		INSERT INTO ISSUE
+		(ISSUE_NO, PRO_SN, ISSUE_RDATE, ISSUE_EDATE, ISSUE_IMP, ISSUE_STTUS
+		, ISSUE_SE, ISSUE_SJ, ISSUE_CN, EMP_CD, JOB_SN)
+		VALUES
+		(
+			ISSUE_SEQ.NEXTVAL
+			, #{proSn,jdbcType=VARCHAR}
+			, SYSDATE
+			, #{issueEdate,jdbcType=VARCHAR}
+			, #{issueImp,jdbcType=VARCHAR}
+			, #{issueSttus,jdbcType=VARCHAR}
+			, #{issueSe,jdbcType=VARCHAR}
+			, #{issueSj,jdbcType=VARCHAR}
+			, #{issueCn,jdbcType=VARCHAR}
+			, #{empCd,jdbcType=VARCHAR}
+			, #{jobSn,jdbcType=NUMERIC}
+		)
+	</insert>
+	
+	<select id="issueList" parameterType="IssueVO" resultType="IssueVO">
+		SELECT 
+			ISSUE_NO
+			, GET_EMP_NAME(EMP_CD) AS writer
+			, PRO_SN
+			, ISSUE_RDATE
+			, ISSUE_IMP
+			, ISSUE_STTUS
+			, ISSUE_SE
+			, ISSUE_SJ
+			, ISSUE_CN
+			, EMP_CD
+			, JOB_SN
+			, ISSUE_EDATE
+		FROM ISSUE
+		WHERE PRO_SN = #{proSn} 
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(issueSe)">
+			AND ISSUE_SE=#{issueSe}
+		</if>
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(issueImp)">
+			AND ISSUE_IMP=#{issueImp}
+		</if>
+		AND ISSUE_STTUS = #{issueSttus} 
+		ORDER BY ISSUE_EDATE ASC ,ISSUE_IMP DESC
+	</select>
+
+	<update id="updateIssue" parameterType="IssueVO">
+		UPDATE ISSUE
+		SET 
+			ISSUE_RDATE= SYSDATE
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(issueImp)">
+				, ISSUE_IMP=#{issueImp}
+			</if>	
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(issueSttus)">
+				, ISSUE_STTUS=#{issueSttus}
+			</if>	
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(issueSe)">
+				, ISSUE_SE=#{issueSe}
+			</if>	
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(issueSj)">
+				, ISSUE_SJ=#{issueSj}
+			</if>	
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(issueCn)">
+				, ISSUE_CN=#{issueCn}
+			</if>	
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(jobSn)">
+				, JOB_SN=#{jobSn}
+			</if>	
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(issueEdate)">
+				, ISSUE_EDATE=#{issueEdate}
+			</if>	
+		WHERE 
+			ISSUE_NO= #{issueNo}
+	</update>
+
+
+</mapper>

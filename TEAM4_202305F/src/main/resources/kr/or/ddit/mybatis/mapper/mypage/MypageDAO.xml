@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.groupware.mypage.dao.MypageDAO">
+
+
+	<resultMap type="EmployeeVO" id="mypageMap" autoMapping="true">
+		<association property="dept" javaType="DeptVO" autoMapping="true"/>
+		<collection property="projectList" ofType="ProjectVO" autoMapping="true">
+			<id property="proSn" column="PRO_SN"/>
+			<collection property="pmemberList" ofType="PmemberVO" autoMapping="true">
+				<id property="empCd" column="EMP_CD" />
+			</collection>
+		</collection>
+	</resultMap>
+
+	<select id="selectMypage1" resultMap="mypageMap" parameterType="String">
+		SELECT
+		    E.EMP_CD, E.EMP_PW, E.EMP_NAME, E.EMP_ZIP, E.EMP_ADRES
+		    , E.EMP_ADRES_DETAIL, E.EMP_BIRTH, E.EMP_SSN, E.EMP_RANK
+		    , E.EMP_HIREDATE, E.DEPT_CD, E.EMP_MAIL, E.EMP_LOGIN_FLAG
+		    , E.EMP_TELNO,  E.EMP_CRTFC_NO, E.EMP_QR, E.EMP_EXTENSION
+		    , E.EMP_POSITION, E.EMP_EMAIL_SECOND,  E.EMP_SUPRR
+		    , E.EMP_SIGN_IMG, E.EMP_PROFILE_IMG
+		    , D.DEPT_CD, D.DEPT_NAME
+		    , P.PRO_SN
+		    , PJ.PRO_NM, PJ.PRO_BDATE, PJ.PRO_EDATE
+		FROM
+		    EMPLOYEE E, DEPT D, PMEMBER P, PROJECT PJ
+		WHERE
+		    E.DEPT_CD = D.DEPT_CD AND E.EMP_CD = P.EMP_CD AND P.PRO_SN = PJ.PRO_SN AND E.EMP_CD = #{empCd}
+	</select>
+	
+	<select id="selectMypage" parameterType="String" resultType="EmployeeVO">
+		SELECT
+		    emp_cd, emp_pw, emp_name, emp_zip, emp_adres
+		    , emp_adres_detail, emp_birth, emp_ssn, emp_rank
+		    , emp_hiredate, dept_cd, emp_mail, emp_login_flag
+		    , emp_telno, emp_crtfc_no, emp_qr, emp_extension
+		    , emp_position, emp_email_second, emp_suprr
+		    , emp_sign_img, emp_profile_img
+		    , FN_GET_DEPT_NAME(emp_cd) DEPT_NAME
+		    , FN_GET_EMP_RANK_NM(emp_cd) RANK_NAME
+		FROM
+		    employee
+		WHERE
+		    EMP_CD = #{empCd}
+	</select>
+	
+	<update id="updateMypage" parameterType="EmployeeVO">
+		UPDATE employee
+		SET
+		    EMP_ZIP = #{empZip}
+		    , EMP_ADRES = #{empAdres}
+		    , EMP_ADRES_DETAIL = #{empAdresDetail}
+		    , EMP_MAIL = #{empMail}
+		    , EMP_EXTENSION = #{empExtension}
+		    , EMP_TELNO = #{empTelno}
+		    <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(empPw)">
+				, EMP_PW=#{empPw}
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(empProfileImg)">
+				, EMP_PROFILE_IMG=#{empProfileImg , jdbcType=VARCHAR}
+			</if>	
+		WHERE
+	        emp_cd = #{empCd} 
+	</update>
+</mapper>

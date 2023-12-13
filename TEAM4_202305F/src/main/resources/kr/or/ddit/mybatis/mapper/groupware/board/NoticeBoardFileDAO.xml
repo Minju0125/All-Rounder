@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일        수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 9.  전수진     최초작성               -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+<mapper namespace="kr.or.ddit.groupware.board.notice.dao.NoticeBoardFileDAO">
+
+	<insert id="insertFile" parameterType="BoardFileVO">
+		<selectKey resultType="String" order="BEFORE" keyProperty="fileCode">
+			SELECT 
+				#{bbsNo} || '_' || 
+				LPAD(NVL(TO_NUMBER(SUBSTR(MAX(FILE_CODE), INSTR(MAX(FILE_CODE), '_') + 1)), 0) + 1, 3, '000') 
+			FROM BBS_FILE
+			WHERE FILE_CODE LIKE #{bbsNo} || '_%'
+		</selectKey>
+		INSERT INTO BBS_FILE (
+		    FILE_CODE
+		    , BBS_NO
+		    , FILE_NAME
+		    , FILE_SAVENAME
+		    , FILE_MIME
+		    , FILE_SIZE
+		    , FILE_FANCYSIZE
+		    , FILE_DOWNLOAD
+		) VALUES (
+			#{fileCode,jdbcType=VARCHAR}
+			, #{bbsNo,jdbcType=NUMERIC}
+			, #{fileName,jdbcType=VARCHAR}
+			, #{fileSavename,jdbcType=VARCHAR}
+			, #{fileMime,jdbcType=VARCHAR}
+			, #{fileSize,jdbcType=NUMERIC}
+			, #{fileFancysize,jdbcType=VARCHAR}
+			, #{fileDownload,jdbcType=NUMERIC}
+		)
+	</insert>
+	
+	<select id="selectBoardFile" parameterType="String">
+		SELECT
+		    FILE_CODE
+		    , BBS_NO
+		    , FILE_NAME
+		    , FILE_SAVENAME
+		    , FILE_MIME
+		    , FILE_SIZE
+		    , FILE_FANCYSIZE
+		    , FILE_DOWNLOAD
+		FROM
+		    BBS_FILE
+		WHERE
+			FILE_CODE = #{fileCode}
+	</select>
+	
+	<update id="incrementDowncount" parameterType="String">
+		UPDATE BBS_FILE
+		SET 
+			FILE_DOWNLOAD = FILE_DOWNLOAD + 1
+		WHERE 
+			FILE_CODE = #{fileCode}
+	</update>
+	
+	<delete id="deleteBoardFile" parameterType="String">
+		DELETE FROM BBS_FILE
+		WHERE
+			FILE_CODE = #{fileCode}
+	</delete>
+	
+</mapper>

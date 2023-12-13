@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일          수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 7.  박민주     최초작성               -->
+<!--  2023. 12. 4.  박민주     'selectEmpForAuth' 에 조건 추가(EMP_LOGIN_FLAG = 'E')              -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+
+<mapper namespace="kr.or.ddit.login.dao.LoginDAO">
+	<select id="selectEmpForAuth" parameterType="EmployeeVO"
+		resultType="EmployeeVO">
+		SELECT
+				EMP_CD
+				, EMP_PW
+				, EMP_NAME
+				,EMP_ZIP
+				,EMP_ADRES
+				,EMP_ADRES_DETAIL
+				,EMP_BIRTH
+				,EMP_SSN
+				,EMP_RANK
+				,EMP_HIREDATE
+				,DEPT_CD
+				,EMP_MAIL
+				,EMP_LOGIN_FLAG
+				,EMP_PROFILE_IMG
+				,EMP_TELNO
+				,EMP_SIGN_IMG
+				,EMP_CRTFC_NO
+				,EMP_QR
+				,EMP_EXTENSION
+				,EMP_POSITION
+				,EMP_EMAIL_SECOND
+		FROM 
+				EMPLOYEE
+		WHERE 
+				EMP_CD=#{empCd}
+	</select>
+	
+	<update id="updateEmpCertfNo" parameterType="EmployeeVO">
+		UPDATE 
+			EMPLOYEE
+		SET
+				EMP_CRTFC_NO= #{empCrtfcNo,jdbcType=VARCHAR}
+			WHERE
+		        EMP_CD= #{empCd,jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateEmpPwAndStatus" parameterType="EmployeeVO">
+		UPDATE 
+			EMPLOYEE
+		SET
+				EMP_PW= #{empPw,jdbcType=VARCHAR},
+				EMP_LOGIN_FLAG= 'N'
+			WHERE
+		        EMP_CD= #{empCd,jdbcType=VARCHAR}
+	</update>
+	
+	<update id="updateEmpPw" parameterType="EmployeeVO">
+		UPDATE 
+			EMPLOYEE
+		SET
+				EMP_PW= #{empPw,jdbcType=VARCHAR},
+				EMP_LOGIN_FLAG= 'E'
+		WHERE
+		        EMP_CD= #{empCd,jdbcType=VARCHAR}
+	</update>
+</mapper>

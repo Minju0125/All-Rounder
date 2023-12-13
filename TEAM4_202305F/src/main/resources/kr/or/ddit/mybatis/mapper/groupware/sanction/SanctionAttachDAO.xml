@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--  [[개정이력(Modification Information)]]       -->
+<!--  수정일          수정자     수정내용               -->
+<!--  ==========   ======    ==============        -->
+<!--  2023. 11. 21. 전수진     최초작성               -->
+<!--  Copyright (c) 2023 by DDIT All right reserved -->
+
+<mapper namespace="kr.or.ddit.groupware.sanction.dao.SanctionAttachDAO">
+	<!-- 결재첨부파일 추가 -->
+	<insert id="insertSanctionAttach" parameterType="SanctionAttachVO">
+		INSERT INTO SANCTION_ATTACH (
+		    ATTACH_NO 			/* 결재첨부파일번호 */
+		    , SANCTN_NO			/* 결재문서번호 */
+		    , ATTACH_ORIGIN_NM	/* 파일원본이름 */
+		    , ATTACH_SAVE_NM 	/* 파일저장이름 */
+		    , ATTACH_MIME 		/* 파일유형 */
+		    , ATTACH_SIZE 		/* 파일크기 */
+		    , ATTACH_FANCYSIZE 	/* 팬시크기 */
+		) VALUES (
+		   	SANCTIONATTACH_SEQ.NEXTVAL
+		    , #{sanctnNo}
+		    , #{attachOriginNm}
+		    , #{attachSaveNm}
+		    , #{attachMime}
+		    , #{attachSize}
+		    , #{attachFancysize}
+		)
+	</insert>
+	
+	<!-- 결재첨부파일 조회 -->
+	<select id="selectSanctionAttach" parameterType="int">
+		SELECT
+		    ATTACH_NO 			/* 결재첨부파일번호 */
+		    , SANCTN_NO			/* 결재문서번호 */
+		    , ATTACH_ORIGIN_NM	/* 파일원본이름 */
+		    , ATTACH_SAVE_NM 	/* 파일저장이름 */
+		    , ATTACH_MIME 		/* 파일유형 */
+		    , ATTACH_SIZE 		/* 파일크기 */
+		    , ATTACH_FANCYSIZE 	/* 팬시크기 */
+		FROM
+		    SANCTION_ATTACH
+		WHERE
+		    ATTACH_NO = #{attachNo}
+	</select>
+
+	<!-- 결재첨부파일 삭제 -->
+	<delete id="deleteBoardAttach" parameterType="int">
+		DELETE FROM SANCTION_ATTACH
+		WHERE
+			ATTACH_NO = #{attachNo}
+	</delete>
+</mapper>

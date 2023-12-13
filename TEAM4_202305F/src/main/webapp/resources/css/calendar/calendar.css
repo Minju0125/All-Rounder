@@ -1,0 +1,66 @@
+@charset "UTF-8";
+
+#calendar {
+	width: auto;
+/*     width: 80vw; */
+    height: 80vh;
+}
+
+#yrModal {           
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 60%; /* 모달 너비 조절 */
+	height: 67.7%; /* 모달 높이 조절 */
+	background-color:white;
+	display: none;
+	z-index: 1000;
+}
+
+#detailModal {           
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 60%; /* 모달 너비 조절 */
+	height: 67.7%; /* 모달 높이 조절 */
+	background-color: white;
+	display: none;
+	z-index: 1000;
+}
+
+#cont {
+    margin: 50px auto;
+    width: 50%;
+    height: 70%;
+    background-color: darkblue;
+    color: yellow;
+}
+#openCal {
+	width : 100px;
+}
+#C{
+	font-size: 30px;
+	background-color: rgb(248, 253, 180);
+}
+#I{
+	font-size: 30px;
+	background-color: rgb(255, 204, 209);
+}
+#D{
+	font-size: 30px;
+	background-color: rgb(201, 200, 249);
+}
+#P{
+	font-size: 30px;
+	background-color: rgb(204, 255, 217);
+}
+input[type=checkbox] {
+
+	zoom: 2.0;
+
+}
+#projectType{
+	display: none;
+}

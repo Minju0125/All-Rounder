@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.admin.adproject.dao.AdminProjectDAO">
+	   
+	<resultMap type="ProjectVO" id="projMap" autoMapping="true">
+		<id property="proSn" column="PRO_SN"/>
+		<association property="emp" javaType="EmployeeVO" autoMapping="true">
+			<id property="empCd" column="EMP_CD"/>
+			<association property="dept" javaType="DeptVO" autoMapping="true">
+				<id property="deptCd" column="DEPT_CD"/>
+			</association>
+			<association property="common" javaType="CommonVO" autoMapping="true">
+			</association> 
+		</association>
+		<collection property="pjobList"  ofType="PjobVO" autoMapping="true">
+			<id property="jobSn" column="JOB_SN"/> 
+			<id property="proSn" column="PRO_SN"/>   
+		<collection property="chargerList" ofType="ChargerVO" autoMapping="true">
+			<id property="empCd" column="EMP_CD" /> 
+			<association property="emp" javaType="EmployeeVO" autoMapping="true">
+			</association>
+		</collection>
+		</collection>
+		<collection property="pmemberList" ofType="PmemberVO" autoMapping="true">
+			<id property="empCd" column="EMP_CD"/> 
+			<association property="emp" javaType="EmployeeVO" autoMapping="true"/>
+		</collection>
+	</resultMap>	
+	
+	 
+	<resultMap type="PmemberVO" id="pmemap" autoMapping="true">
+		<id property="empCd" column="EMP_CD"/> 
+			<association property="emp" javaType="EmployeeVO" autoMapping="true"/>
+	</resultMap>
+	
+	
+	<!-- 일감 수, 이슈 수 -->
+	<select id="selectJICnt" parameterType="String" resultType="ChartVO">
+	  SELECT 
+	    (
+	        SELECT COUNT(*)
+	        FROM ISSUE
+	        WHERE ISSUE_SE = '1' AND PRO_SN =  #{proSn}
+	    ) AS nomalissue,
+	    (
+	        SELECT COUNT(*)
+	        FROM ISSUE
+	        WHERE ISSUE_SE = '2' AND PRO_SN =  #{proSn}
+	    ) AS highissue,
+	    COUNT(*)-SUM(CASE WHEN JOBU_SN IS NOT NULL THEN 1 ELSE 0 END) AS uppercount,
+	    SUM(CASE WHEN JOBU_SN IS NOT NULL THEN 1 ELSE 0 END) AS lowcount
+	FROM
+	    PJOB P
+	JOIN
+	    PROJECT PJ ON PJ.PRO_SN = P.PRO_SN
+	WHERE
+	    P.PRO_SN=  #{proSn}
+	GROUP BY
+	    PJ.PRO_NM
+	</select>
+	
+	
+	<!-- 일감목록 -->
+	
+	<select id="selectJobList" parameterType="String" resultType="PjobVO">
+		SELECT 
+		    J.JOB_SN
+		    , J.PRO_SN
+		    , J.JOBU_SN
+		    , J.JOB_SJ
+		    , J.JOB_WRITER 
+		    , GET_EMP_NAME(J.JOB_WRITER) AS findName
+		    , (SELECT T.PRO_NM FROM PROJECT T WHERE T.PRO_SN = J.PRO_SN) AS findName2
+		    , TO_CHAR(J.JOB_RDATE,'YYYY-MM-DD') AS OB_RDATE
+		    , J.JOB_STCD
+		    , J.JOB_PRIORT
+		    , TO_CHAR(TO_DATE(J.JOB_BDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_BDATE
+		    , TO_CHAR(TO_DATE(J.JOB_EDATE,'YYYYMMDD'),'YYYY-MM-DD') AS JOB_EDATE
+		    , TO_CHAR(J.JOB_CDATE,'YYYY-MM-DD') AS JOB_CDATE
+		    , J.JOB_CN
+		    , J.PRO_FILE_CD
+		    , J.JOB_PROGRS
+		    , J.JOB_SCOPE
+		    , C.EMP_PROFILE_IMGS
+		FROM
+			PJOB J
+		INNER JOIN( 
+			SELECT 
+			    LISTAGG(NVL(E.EMP_PROFILE_IMG,'/resources/images/basic.png'), ', ') WITHIN GROUP (ORDER BY E.EMP_PROFILE_IMG) AS EMP_PROFILE_IMGS,
+			    C.JOB_SN AS JOB_SN,
+			    C.PRO_SN AS PRO_SN
+			FROM EMPLOYEE E
+			INNER JOIN CHARGER C ON C.EMP_CD = E.EMP_CD
+			GROUP BY C.JOB_SN, C.PRO_SN
+		) C
+		ON J.JOB_SN = C.JOB_SN
+		AND J.PRO_SN = C.PRO_SN
+		WHERE  J.PRO_SN =  #{proSn}
+	</select>
+	
+	
+<!-- 	페이징을 위한 총 개수 카운 -->
+	<select id="selectTotalRecord" parameterType="PaginationInfo" resultType="int">
+		SELECT COUNT(*)
+		FROM
+		    PROJECT P 
+		LEFT OUTER JOIN
+		    PMEMBER PE ON P.PRO_SN = PE.PRO_SN
+		LEFT OUTER JOIN
+		    EMPLOYEE E ON PE.EMP_CD = E.EMP_CD
+		WHERE
+		    PE.PRO_LEADER = 'Y'
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+									AND	INSTR(PRO_NM, #{simpleCondition.searchWord}) > 0
+		</if>
+	</select>
+	
+
+	
+	
+	
+	<select id="selectAdminProjectList" parameterType="PaginationInfo" resultMap="projMap">
+		SELECT BOARDVIEW1.*
+			FROM ( SELECT A.*, ROWNUM RNUM
+				FROM(
+					SELECT 
+					    P.PRO_SN,
+					    P.PRO_NM, 
+					    TO_CHAR(TO_DATE(P.PRO_BDATE, 'YYYYMMDD'), 'YY.MM.DD') AS PRO_BDATE,
+					    TO_CHAR(TO_DATE(P.PRO_EDATE, 'YYYYMMDD'), 'YY.MM.DD') AS PRO_EDATE, 
+					    P.PRO_STTUS,
+					    P.PRO_PROGRS,
+					    PE.EMP_CD,
+					    E.EMP_NAME AS EMP_LEADERNAME,
+					    E.EMP_LOGIN_FLAG, 
+					    PE.PRO_LEADER, 
+					    (SELECT COUNT(*) - COUNT(JOBU_SN) FROM PJOB WHERE PRO_SN = P.PRO_SN) AS UPPER_JOBCOUNT,
+					    (SELECT COUNT(JOBU_SN) FROM PJOB WHERE PRO_SN = P.PRO_SN AND JOBU_SN IS NOT NULL) AS LOWER_JOBCOUNT,
+					    (SELECT COUNT(EMP_CD) FROM PMEMBER  WHERE PRO_SN = P.PRO_SN) AS PMEM_COUNT
+					FROM
+					    PROJECT P 
+					LEFT OUTER JOIN
+					    PMEMBER PE ON P.PRO_SN = PE.PRO_SN
+					LEFT OUTER JOIN
+					    EMPLOYEE E ON PE.EMP_CD = E.EMP_CD
+					WHERE
+					    PE.PRO_LEADER = 'Y'
+						        <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+									AND	INSTR(PRO_NM, #{simpleCondition.searchWord}) > 0
+								</if>	 
+						        ORDER BY PRO_BDATE DESC 
+						    ) A)  BOARDVIEW1
+						<![CDATA[ 
+						WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+						]]> 
+	
+	</select>
+	
+	<select id="upperCountJop" resultType="String" parameterType="ProjectVO">
+	SELECT 
+    	COUNT(*)-count(JOBU_SN)
+	FROM 
+   	 PJOB
+	WHERE
+    	PRO_SN = #{proSn} 
+	
+	</select>
+	
+	
+	<select id="lowCountJob" resultType="String" parameterType="ProjectVO">
+   	SELECT 
+            COUNT(JOBU_SN)
+            	FROM PJOB
+            WHERE
+            	PRO_SN= #{proSn}
+            AND JOBU_SN IS NOT NULL 
+	</select>
+	
+	 
+	<insert id="insertAdminProject" parameterType="ProjectVO">
+		    <selectKey keyProperty="proSn" order="BEFORE" resultType="String">
+		        SELECT 'P' || TO_NUMBER(TO_CHAR(SYSDATE, 'YY')) || LPAD(NVL(MAX(SUBSTR(PRO_SN, 5)), 0) + 1, 3, '0') AS PRO_SN
+		        FROM PROJECT
+		        WHERE SUBSTR(PRO_SN, 2, 2) = TO_NUMBER(TO_CHAR(SYSDATE, 'YY')) 
+		    </selectKey>
+		    INSERT INTO project (
+		        PRO_SN,
+		        PRO_NM,
+		        PRO_BDATE,
+		        PRO_EDATE,
+		        PRO_STTUS,
+		        PRO_SDATE
+		    ) VALUES (
+		        #{proSn},
+		        #{proNm},
+		        #{proBdate,jdbcType=VARCHAR},
+		        #{proEdate,jdbcType=VARCHAR}, 
+		        1,
+		        TO_CHAR(SYSDATE, 'YYYYMMDD') 
+		    )
+	</insert>  
+	
+	<insert id="insertAdProjectPmember" parameterType="PmemberVO"> 
+	
+		    INSERT INTO PMEMBER (
+			    EMP_CD,
+			    PRO_SN,
+			    PRO_LEADER 
+			) VALUES (
+			    #{empCd},
+			    #{proSn},
+			    #{proLeader} 
+			)
+	 
+	</insert>
+	
+	<insert id="insertAfterAdProjectPmember" parameterType="PmemberVO">
+		INSERT INTO PMEMBER (
+			    EMP_CD,
+			    PRO_SN,
+			    PRO_LEADER 
+			) VALUES (
+			    #{empCd},
+			    #{proSn},
+			    #{proLeader} 
+			) 
+	</insert>
+	
+	<!-- 	페이징을 위한 총 개수 카운 -->
+	<select id="selectTotalRecordPmember" parameterType="PaginationInfo" resultType="int">
+		SELECT COUNT(*)
+		 FROM
+	                PMEMBER P
+	            JOIN
+	                EMPLOYEE E ON P.EMP_CD = E.EMP_CD
+	            JOIN
+	                DEPT ON E.DEPT_CD = DEPT.DEPT_CD
+	            JOIN
+	                COMMON_CODE C ON C.COMMON_CODE_CD = E.EMP_RANK
+		where
+		PRO_SN = #{proSn}
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+	                    AND INSTR(E.EMP_NAME, #{simpleCondition.searchWord}) > 0
+	                </if>
+	</select>
+	
+		<select id="selectAdminProjectMember" resultMap="pmemap" parameterType="PaginationInfo">
+	    SELECT BOARDVIEW1.*
+	    FROM ( 
+	        SELECT A.*, ROWNUM RNUM
+	        FROM (
+	            SELECT
+	                E.EMP_CD,
+	                E.EMP_NAME,
+	                E.EMP_LOGIN_FLAG,   
+	                C.COMMON_CODE_SJ AS EMP_RANK,
+	                DEPT.DEPT_NAME AS DEPT_CD,
+	                E.EMP_MAIL,
+	                E.EMP_TELNO,
+	                E.EMP_PROFILE_IMG,
+	                E.EMP_EXTENSION,
+	                P.PRO_SN, 
+	                P.PRO_LEADER
+	            FROM
+	                PMEMBER P
+	            JOIN
+	                EMPLOYEE E ON P.EMP_CD = E.EMP_CD
+	            JOIN
+	                DEPT ON E.DEPT_CD = DEPT.DEPT_CD
+	            JOIN
+	                COMMON_CODE C ON C.COMMON_CODE_CD = E.EMP_RANK
+	            WHERE
+	                P.PRO_SN = #{proSn}
+	                <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) and simpleCondition.searchType eq 'title'">
+	                    AND INSTR(E.EMP_NAME, #{simpleCondition.searchWord}) > 0
+	                </if>
+	            ORDER BY
+	                P.PRO_LEADER DESC, E.EMP_CD DESC 
+	        ) A
+	    ) BOARDVIEW1
+	    <![CDATA[ 
+	    WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+	    ]]>
+	</select>
+
+	
+	<delete id="deleteAdminProjectMem"  parameterType="PmemberVO"> 
+		DELETE FROM PMEMBER
+		WHERE
+			EMP_CD = #{empCd} AND PRO_SN = #{proSn}  
+	</delete>
+	
+	
+<!-- 	프로젝트의 리더의 Y를N으로 바꾸는 작업-->
+	<update id="updateProjectLeaderDel" parameterType="PmemberVO">
+	    UPDATE PMEMBER
+			SET
+			    PRO_LEADER = 'N'
+			WHERE
+
+    			PRO_SN = #{proSn}
+    			AND PRO_LEADER ='Y'
+	
+	</update>
+	
+<!-- 	선택된 사람을 리더로 바꾸는작업-->
+	<update id="updateProjectLeaderChange" parameterType="PmemberVO">
+	    UPDATE PMEMBER
+			SET
+			    PRO_LEADER = 'Y'
+			WHERE
+        		EMP_CD = #{empCd}
+    			AND PRO_SN = #{proSn} 
+	</update>  
+	  
+<!-- 	리더로 선택할프로젝트의 사람을 불러오는 작업 -->
+	<select id="projectPmemberSelect" resultMap="pmemap"  parameterType="PmemberVO"> 
+		SELECT 
+	                E.EMP_CD,
+	                E.EMP_NAME,
+	                P.PRO_SN, 
+	                P.PRO_LEADER,
+	                E.EMP_LOGIN_FLAG 
+	            FROM
+	                PMEMBER P
+	            JOIN
+	                EMPLOYEE E ON P.EMP_CD = E.EMP_CD
+                WHERE
+                    P.PRO_SN = #{proSn} 
+       			AND E.EMP_LOGIN_FLAG NOT IN 'L'   
+                  ORDER BY
+               P.PRO_LEADER DESC , E.EMP_CD DESC 
+	</select>
+	
+<!-- 	리더가 사람 목록 불러오는 작업 -->
+	<select id="projectPmemberSelectleader" resultMap="pmemap"  parameterType="PmemberVO"> 
+		SELECT  
+	                E.EMP_CD,
+	                E.EMP_NAME,
+	                P.PRO_SN, 
+	                P.PRO_LEADER,
+	                E.EMP_LOGIN_FLAG 
+	            FROM
+	                PMEMBER P
+	            JOIN
+	                EMPLOYEE E ON P.EMP_CD = E.EMP_CD
+                WHERE
+                    P.PRO_SN = #{proSn}  
+                  ORDER BY
+               P.PRO_LEADER DESC , E.EMP_CD DESC 
+	</select>
+	
+	<update id="updateAdminProject" parameterType="ProjectVO">
+	UPDATE PROJECT 
+SET
+    PRO_NM = #{proNm}, 
+    PRO_BDATE = #{proBdate},
+    PRO_EDATE = #{proEdate}  
+WHERE
+        PRO_SN = #{proSn}  
+	
+	</update>
+	 
+	
+	 
+	
+	
+	
+</mapper>
